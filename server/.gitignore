@@ -18,7 +18,7 @@ npm-debug.*
 *.orig.*
 web-build/
 dist/
-
+.env
 # iOS
 ios/Pods/
 ios/build/
