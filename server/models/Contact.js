@@ -4,12 +4,27 @@ const ContactSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        default: null
+    },
+    ownerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    linkedUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     },
     name: {
         type: String,
         required: [true, 'Name is required'],
         trim: true
+    },
+    email: {
+        type: String,
+        trim: true,
+        default: ''
     },
     phone: {
         type: String,
@@ -40,6 +55,21 @@ const ContactSchema = new mongoose.Schema({
         enum: ['Family', 'Friend', 'Work', 'Business', 'Other'],
         default: 'Other'
     },
+    relationshipType: {
+        type: String,
+        enum: ['friend', 'family', 'colleague', 'client', 'other'],
+        default: 'other'
+    },
+    meetContext: {
+        type: String,
+        enum: ['school', 'college', 'work', 'event', 'other'],
+        default: 'other'
+    },
+    priorityLevel: {
+        type: String,
+        enum: ['high', 'medium', 'low'],
+        default: 'medium'
+    },
     relationshipScore: {
         type: Number,
         default: 0
@@ -61,6 +91,10 @@ const ContactSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+
+ContactSchema.index({ ownerId: 1, phone: 1 }, { unique: true });
+ContactSchema.index({ userId: 1 });
+ContactSchema.index({ linkedUserId: 1 });
 
 // Update timestamp on save
 // Update timestamp on save

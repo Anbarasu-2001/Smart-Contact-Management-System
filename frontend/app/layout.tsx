@@ -8,6 +8,7 @@ import { Providers } from "./providers";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/layout/Navbar";
+import SidebarClient from "./SidebarClient";
 import Alerts from "@/components/layout/Alerts";
 
 export const metadata: Metadata = {
@@ -28,16 +29,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html suppressHydrationWarning lang="en">
-      <head>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-      </head>
+    <html suppressHydrationWarning lang="en" className="dark">
       <body
         className={clsx(
           "min-h-screen text-foreground bg-background font-sans antialiased",
@@ -45,23 +39,29 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <div className="relative flex flex-col h-screen">
-            <Navbar />
-            <Alerts />
-            <main className="container mx-auto max-w-7xl pt-6 px-6 flex-grow">
-              {children}
-            </main>
-            <footer className="w-full flex items-center justify-center py-3">
-              <Link
-                isExternal
-                className="flex items-center gap-1 text-current"
-                href="https://heroui.com?utm_source=next-app-template"
-                title="heroui.com homepage"
-              >
-                <span className="text-default-600">Powered by</span>
-                <p className="text-primary">HeroUI</p>
-              </Link>
-            </footer>
+          <div className="flex h-screen overflow-hidden">
+            <SidebarClient />
+            <div className="flex-1 ml-64 flex flex-col min-h-screen">
+              <Navbar />
+              <Alerts />
+              <main className="flex-1 overflow-y-auto">
+                <div className="w-full max-w-7xl mx-auto flex flex-col min-h-[calc(100vh-70px-56px)]">
+                  {/* 70px Navbar, 56px Footer */}
+                  {children}
+                </div>
+              </main>
+              <footer className="w-full flex items-center justify-center h-14 border-t border-cyan-300/10 bg-black/20 backdrop-blur-md">
+                <Link
+                  isExternal
+                  className="flex items-center gap-1 text-slate-300 hover:text-cyan-200 transition-colors"
+                  href="https://heroui.com?utm_source=next-app-template"
+                  title="heroui.com homepage"
+                >
+                  <span>Powered by</span>
+                  <p className="text-cyan-300">HeroUI</p>
+                </Link>
+              </footer>
+            </div>
           </div>
         </Providers>
       </body>

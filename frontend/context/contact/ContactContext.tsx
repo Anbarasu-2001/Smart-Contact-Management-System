@@ -20,10 +20,18 @@ import {
 export interface Contact {
     _id?: string;
     name: string;
-    email: string;
+    email?: string;
     phone: string;
-    type: 'personal' | 'professional';
+    relationship?: 'Friend' | 'Family' | 'Work';
+    relationshipType?: 'friend' | 'family' | 'work' | 'colleague' | 'client' | 'other';
+    meetContext?: 'school' | 'college' | 'work' | 'event' | 'other';
+    priorityLevel?: 'high' | 'medium' | 'low';
+    notes?: string;
+    type?: 'personal' | 'professional';
+    linkedUserId?: string | null;
     user?: string;
+    userId?: string | null;
+    ownerId?: string;
     date?: string;
 }
 
@@ -57,11 +65,11 @@ type ContactAction =
 
 interface ContactContextType extends ContactState {
     getContacts: () => Promise<void>;
-    addContact: (contact: Contact) => Promise<void>;
-    deleteContact: (id: string) => Promise<void>;
+    addContact: (contact: Contact) => Promise<Contact | null>;
+    deleteContact: (id: string) => Promise<boolean>;
     setCurrent: (contact: Contact) => void;
     clearCurrent: () => void;
-    updateContact: (contact: Contact) => Promise<void>;
+    updateContact: (contact: Contact) => Promise<Contact | null>;
     filterContacts: (text: string) => void;
     clearFilter: () => void;
     getDashboardStats: () => Promise<void>;
@@ -70,7 +78,15 @@ interface ContactContextType extends ContactState {
 
 const ContactContext = createContext<ContactContextType | undefined>(undefined);
 
+const sortContactsByName = (contacts: Contact[] = []) => {
+    return [...contacts].sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
+};
+
 const getErrorMessage = (err: any) => {
+    if (err?.response?.status === 401) {
+        return '401 Unauthorized - please login again';
+    }
+
     if (!err.response || !err.response.data) {
         return 'Server Error';
     }
@@ -94,21 +110,24 @@ const contactReducer = (state: ContactState, action: ContactAction): ContactStat
         case GET_CONTACTS:
             return {
                 ...state,
-                contacts: action.payload,
+                contacts: sortContactsByName(Array.isArray(action.payload) ? action.payload : []),
+                filtered: null,
                 loading: false,
             };
         case ADD_CONTACT:
             return {
                 ...state,
-                contacts: [action.payload, ...state.contacts],
+                contacts: sortContactsByName([action.payload, ...state.contacts]),
+                filtered: null,
                 loading: false,
             };
         case UPDATE_CONTACT:
             return {
                 ...state,
-                contacts: state.contacts.map((contact) =>
+                contacts: sortContactsByName(state.contacts.map((contact) =>
                     contact._id === action.payload._id ? action.payload : contact
-                ),
+                )),
+                filtered: null,
                 loading: false,
             };
         case DELETE_CONTACT:
@@ -117,6 +136,7 @@ const contactReducer = (state: ContactState, action: ContactAction): ContactStat
                 contacts: state.contacts.filter(
                     (contact) => contact._id !== action.payload
                 ),
+                filtered: null,
                 loading: false,
             };
         case SET_CURRENT:
@@ -134,9 +154,13 @@ const contactReducer = (state: ContactState, action: ContactAction): ContactStat
                 ...state,
                 filtered: state.contacts.filter((contact) => {
                     const regex = new RegExp(`${action.payload}`, 'gi');
+                    const name = String(contact.name ?? '');
+                    const phone = String(contact.phone ?? '');
+                    const email = String(contact.email ?? '');
                     return (
-                        contact.name.match(regex) ||
-                        (contact.email && contact.email.match(regex))
+                        name.match(regex)
+                        || phone.match(regex)
+                        || email.match(regex)
                     );
                 }),
             };
@@ -179,13 +203,41 @@ const ContactStateProvider = (props: ContactStateProps) => {
 
     const [state, dispatch] = useReducer(contactReducer, initialState);
 
+    const getAuthConfig = React.useCallback(() => {
+        const token = localStorage.getItem('token');
+        return {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-auth-token': token || '',
+                Authorization: token ? `Bearer ${token}` : '',
+            },
+        };
+    }, []);
+
     // Get Contacts
-    const getContacts = React.useCallback(async () => {
-        try {
-            const res = await axios.get('http://localhost:5000/api/contacts');
+    const getContacts = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            dispatch({
+                type: CONTACT_ERROR,
+                payload: '401 Unauthorized - token missing',
+            });
             dispatch({
                 type: GET_CONTACTS,
-                payload: res.data,
+                payload: [],
+            });
+            return;
+        }
+
+        try {
+            const res = await axios.get('http://localhost:5000/api/contacts', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            dispatch({
+                type: GET_CONTACTS,
+                payload: Array.isArray(res.data) ? res.data : [],
             });
         } catch (err) {
             dispatch({
@@ -193,18 +245,11 @@ const ContactStateProvider = (props: ContactStateProps) => {
                 payload: getErrorMessage(err),
             });
         }
-    }, []);
+    };
 
     // Add Contact
-    const addContact = React.useCallback(async (contact: Contact) => {
-        const token = localStorage.getItem('token');
-
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token,
-            },
-        };
+    const addContact = async (contact: Contact) => {
+        const config = getAuthConfig();
 
         try {
             const res = await axios.post(
@@ -219,6 +264,9 @@ const ContactStateProvider = (props: ContactStateProps) => {
                 payload: contactData,
             });
 
+            // Keep UI fast by inserting immediately, then sync canonical list from DB.
+            void getContacts();
+
             // If there's a warning about similar contacts, show it
             if (res.data.warning) {
                 dispatch({
@@ -226,42 +274,40 @@ const ContactStateProvider = (props: ContactStateProps) => {
                     payload: res.data.warning,
                 });
             }
+            return contactData;
         } catch (err) {
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
             });
+            return null;
         }
-    }, []);
+    };
 
     // Delete Contact
-    const deleteContact = React.useCallback(async (id: string) => {
+    const deleteContact = async (id: string) => {
         try {
-            await axios.delete(`http://localhost:5000/api/contacts/${id}`);
+            await axios.delete(`http://localhost:5000/api/contacts/${id}`, getAuthConfig());
             dispatch({
                 type: DELETE_CONTACT,
                 payload: id,
             });
+            return true;
         } catch (err) {
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
             });
+            return false;
         }
-    }, []);
+    };
 
     // Update Contact
-    const updateContact = React.useCallback(async (contact: Contact) => {
+    const updateContact = async (contact: Contact) => {
         // Ensure id is present for update
-        if (!contact._id) return;
+        if (!contact._id) return null;
 
-        const token = localStorage.getItem('token');
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token,
-            },
-        };
+        const config = getAuthConfig();
 
         try {
             const res = await axios.put(
@@ -273,36 +319,38 @@ const ContactStateProvider = (props: ContactStateProps) => {
                 type: UPDATE_CONTACT,
                 payload: res.data,
             });
+            return res.data;
         } catch (err) {
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
             });
+            return null;
         }
-    }, []);
+    };
 
     // Set Current Contact
-    const setCurrent = React.useCallback((contact: Contact) => {
+    const setCurrent = (contact: Contact) => {
         dispatch({ type: SET_CURRENT, payload: contact });
-    }, []);
+    };
 
     // Clear Current Contact
-    const clearCurrent = React.useCallback(() => {
+    const clearCurrent = () => {
         dispatch({ type: CLEAR_CURRENT });
-    }, []);
+    };
 
     // Filter Contacts
-    const filterContacts = React.useCallback((text: string) => {
+    const filterContacts = (text: string) => {
         dispatch({ type: FILTER_CONTACTS, payload: text });
-    }, []);
+    };
 
     // Clear Filter
-    const clearFilter = React.useCallback(() => {
+    const clearFilter = () => {
         dispatch({ type: CLEAR_FILTER });
-    }, []);
+    };
 
     // Get Dashboard Stats
-    const getDashboardStats = React.useCallback(async () => {
+    const getDashboardStats = async () => {
         try {
             const res = await axios.get('http://localhost:5000/api/dashboard');
             dispatch({
@@ -315,7 +363,7 @@ const ContactStateProvider = (props: ContactStateProps) => {
                 payload: getErrorMessage(err),
             });
         }
-    }, []);
+    };
 
     // Generate Share Link
     const generateShareLink = React.useCallback(async (contactId: string, expiryInMinutes: number) => {
@@ -324,12 +372,13 @@ const ContactStateProvider = (props: ContactStateProps) => {
             headers: {
                 'Content-Type': 'application/json',
                 'x-auth-token': token,
+                Authorization: token ? `Bearer ${token}` : '',
             },
         };
         try {
             const res = await axios.post(
-                `http://localhost:5000/api/share/${contactId}`,
-                { expiryInMinutes },
+                'http://localhost:5000/api/share/create',
+                { contactId, expiresInMinutes: expiryInMinutes },
                 config
             );
             return res.data;

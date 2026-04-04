@@ -4,38 +4,133 @@ const auth = require('../middleware/auth');
 const crypto = require('crypto');
 const ShareLink = require('../models/ShareLink');
 const Contact = require('../models/Contact');
-const Interaction = require('../models/Interaction');
 
-// @route   POST api/share/:contactId
-// @desc    Generate a share link
-// @access  Private
-router.post('/:contactId', auth, async (req, res) => {
-    const { loopTime } = req.body; // expiry time in minutes? Or absolute date?
-    // Requirement says: "User selects contact, Sets expiry time"
-    const { expiryInMinutes } = req.body;
+const getShareStatus = (share) => {
+    const now = new Date();
+    if (!share) return 'expired';
+    if (!share.isActive || (share.expiresAt && share.expiresAt <= now)) return 'expired';
+    if (share.viewed) return 'viewed';
+    return 'active';
+};
+
+const toPositiveMinutes = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+    return Math.floor(parsed);
+};
+
+const emitShareUpdated = (req, share, statusOverride = null) => {
+    const io = req.app.get('io');
+    if (!io || !share) return;
+
+    const payload = {
+        token: share.token,
+        isActive: share.isActive,
+        status: statusOverride || getShareStatus(share),
+        expiresAt: share.expiresAt,
+        accessType: share.accessType || 'limited',
+        isOneTime: Boolean(share.isOneTime),
+    };
+
+    io.to(`user:${String(share.receiverId)}`).emit('shareUpdated', payload);
+    io.to(`user:${String(share.senderId)}`).emit('shareUpdated', payload);
+};
+
+const createShare = async (req, res, contactIdFromPath = null) => {
+    const contactId = req.body.contactId || contactIdFromPath;
+    const receiverId = req.body.receiverId;
+    const expiresInMinutes = toPositiveMinutes(req.body.expiresInMinutes);
+    const isOneTime = Boolean(req.body.isOneTime);
+
+    if (!contactId || !receiverId || !expiresInMinutes) {
+        return res.status(400).json({ msg: 'contactId, receiverId and expiresInMinutes are required' });
+    }
 
     try {
-        const contact = await Contact.findById(req.params.contactId);
-        if (!contact) return res.status(404).json({ msg: 'Contact not found' });
+        const contact = await Contact.findById(contactId);
+        if (!contact) {
+            return res.status(404).json({ msg: 'Contact not found' });
+        }
+
         if (contact.userId.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        const token = crypto.randomBytes(20).toString('hex');
-        const expiryTime = new Date(Date.now() + expiryInMinutes * 60 * 1000);
+        if (String(receiverId) === String(req.user.id)) {
+            return res.status(400).json({ msg: 'receiverId must be different from sender' });
+        }
 
-        const newShareLink = new ShareLink({
-            contactId: req.params.contactId,
+        const token = crypto.randomBytes(24).toString('hex');
+        const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+        const share = await ShareLink.create({
+            senderId: req.user.id,
+            contactId,
+            receiverId,
             token,
-            expiryTime
+            expiresAt,
+            isOneTime,
+            accessType: 'limited',
+            isActive: true,
         });
 
-        await newShareLink.save();
+        res.status(201).json({
+            token: share.token,
+            expiresAt: share.expiresAt,
+            isActive: share.isActive,
+            receiverId: share.receiverId,
+            accessType: share.accessType,
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
 
-        // Return the link (or just token)
-        // Frontend will construct the full URL
-        res.json({ token, expiryTime });
+// @route   POST api/share/create
+// @desc    Generate a secure share link
+// @access  Private
+router.post('/create', auth, async (req, res) => createShare(req, res));
 
+// Backward-compatible endpoint currently used in existing UI
+router.post('/:contactId', auth, async (req, res) => createShare(req, res, req.params.contactId));
+
+// @route   GET api/share/mine
+// @desc    Get sender share history with statuses
+// @access  Private
+router.get('/mine', auth, async (req, res) => {
+    try {
+        const links = await ShareLink.find({ senderId: req.user.id })
+            .sort({ createdAt: -1 })
+            .populate('contactId', 'name phone email')
+            .populate('receiverId', 'name email')
+            .lean();
+
+        const response = links.map((share) => {
+            const status = getShareStatus(share);
+            return {
+                _id: share._id,
+                token: share.token,
+                shareLink: `/share/${share.token}`,
+                senderId: share.senderId,
+                receiverId: share.receiverId?._id || share.receiverId,
+                receiverName: share.receiverId?.name || 'Unknown User',
+                contactId: share.contactId?._id || share.contactId,
+                contactName: share.contactId?.name || 'Unknown Contact',
+                createdAt: share.createdAt,
+                expiresAt: share.expiresAt,
+                isActive: share.isActive,
+                viewed: Boolean(share.viewed),
+                viewedAt: share.viewedAt || null,
+                status,
+                isOneTime: Boolean(share.isOneTime),
+                accessType: share.accessType || 'limited',
+            };
+        });
+
+        res.json(response);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -43,49 +138,183 @@ router.post('/:contactId', auth, async (req, res) => {
 });
 
 // @route   GET api/share/:token
-// @desc    Get contact details via token
-// @access  Public
-router.get('/:token', async (req, res) => {
+// @desc    Get limited contact access details via token
+// @access  Private (receiver only)
+router.get('/:token', auth, async (req, res) => {
     try {
-        const shareLink = await ShareLink.findOne({ token: req.params.token });
+        const share = await ShareLink.findOne({ token: req.params.token });
 
-        if (!shareLink) {
-            return res.status(404).json({ msg: 'Invalid or expired link' });
+        if (!share) {
+            return res.status(404).json({ msg: 'Invalid link' });
         }
 
-        if (shareLink.expiryTime < Date.now() || !shareLink.isActive) {
-            return res.status(401).json({ msg: 'Link has expired' });
+        if (String(share.receiverId) !== String(req.user.id)) {
+            return res.status(403).json({ msg: 'Not authorized for this share token' });
         }
 
-        const contact = await Contact.findById(shareLink.contactId).select('-userId -notes');
-        // Hide sensitive info like notes or user ID?
-        // Requirement: "Show restricted contact view"
-        // Let's hide 'notes' and 'userId'.
+        const now = new Date();
+        if (!share.isActive || share.expiresAt <= now) {
+            if (share.isActive && share.expiresAt <= now) {
+                share.isActive = false;
+                await share.save();
+            }
+            return res.status(410).json({ msg: 'Link expired' });
+        }
+
+        const contact = await Contact.findById(share.contactId).select('name');
 
         if (!contact) {
             return res.status(404).json({ msg: 'Contact not found' });
         }
 
-        // Mask phone number for privacy (show first 3 and last 3 digits)
-        let maskedPhone = contact.phone;
-        if (contact.phone && contact.phone.length > 6) {
-            const firstThree = contact.phone.substring(0, 3);
-            const lastThree = contact.phone.substring(contact.phone.length - 3);
-            const middleLength = contact.phone.length - 6;
-            maskedPhone = firstThree + '*'.repeat(middleLength) + lastThree;
+        res.json({
+            contactId: String(share.contactId),
+            name: contact.name,
+            expiresAt: share.expiresAt,
+            isOneTime: share.isOneTime,
+            isActive: share.isActive,
+            accessType: share.accessType || 'limited',
+            status: getShareStatus(share),
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/share/:token/access
+// @desc    Validate token and consume action-based access
+// @access  Private (receiver only)
+router.post('/:token/access', auth, async (req, res) => {
+    try {
+        const action = String(req.body?.action || '').toLowerCase();
+        if (!['call', 'chat'].includes(action)) {
+            return res.status(400).json({ msg: 'action must be call or chat' });
         }
 
-        // Update access tracking
-        shareLink.accessCount += 1;
-        shareLink.lastAccessedAt = new Date();
-        await shareLink.save();
+        const share = await ShareLink.findOne({ token: req.params.token });
+        if (!share) {
+            return res.status(404).json({ msg: 'Invalid link' });
+        }
 
-        // Return contact with masked phone
-        const contactData = contact.toObject();
-        contactData.phone = maskedPhone;
+        if (String(share.receiverId) !== String(req.user.id)) {
+            return res.status(403).json({ msg: 'Not authorized for this share token' });
+        }
 
-        res.json(contactData);
+        const now = new Date();
+        if (!share.isActive || share.expiresAt <= now) {
+            if (share.isActive && share.expiresAt <= now) {
+                share.isActive = false;
+                await share.save();
+            }
+            return res.status(410).json({ msg: 'Link expired' });
+        }
 
+        const contact = await Contact.findById(share.contactId).select('name');
+        if (!contact) {
+            return res.status(404).json({ msg: 'Contact not found' });
+        }
+
+        share.accessCount += 1;
+        share.lastAccessedAt = now;
+        share.viewed = true;
+        share.viewedAt = now;
+        if (share.isOneTime) {
+            share.isActive = false;
+            share.usedAt = now;
+        }
+        await share.save();
+
+        res.json({
+            action,
+            contactId: String(share.contactId),
+            name: contact.name,
+            expiresAt: share.expiresAt,
+            isOneTime: share.isOneTime,
+            isActive: share.isActive,
+            accessType: share.accessType || 'limited',
+            status: getShareStatus(share),
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PATCH api/share/:token
+// @desc    Update share link settings
+// @access  Private (sender only)
+router.patch('/:token', auth, async (req, res) => {
+    try {
+        const share = await ShareLink.findOne({ token: req.params.token });
+        if (!share) {
+            return res.status(404).json({ msg: 'Share link not found' });
+        }
+
+        if (String(share.senderId) !== String(req.user.id)) {
+            return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        const hasOneTime = Object.prototype.hasOwnProperty.call(req.body || {}, 'isOneTime');
+        if (!hasOneTime) {
+            return res.status(400).json({ msg: 'No editable fields provided' });
+        }
+
+        share.isOneTime = Boolean(req.body.isOneTime);
+        await share.save();
+        emitShareUpdated(req, share);
+
+        res.json({
+            token: share.token,
+            isOneTime: share.isOneTime,
+            expiresAt: share.expiresAt,
+            isActive: share.isActive,
+            accessType: share.accessType || 'limited',
+            status: getShareStatus(share),
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PATCH api/share/:token/extend
+// @desc    Extend share link expiry by minutes
+// @access  Private (sender only)
+router.patch('/:token/extend', auth, async (req, res) => {
+    try {
+        const minutes = toPositiveMinutes(req.body?.minutes);
+        if (!minutes) {
+            return res.status(400).json({ msg: 'minutes must be a positive number' });
+        }
+
+        const share = await ShareLink.findOne({ token: req.params.token });
+        if (!share) {
+            return res.status(404).json({ msg: 'Share link not found' });
+        }
+
+        if (String(share.senderId) !== String(req.user.id)) {
+            return res.status(401).json({ msg: 'Not authorized' });
+        }
+
+        if (!share.isActive) {
+            return res.status(400).json({ msg: 'Cannot extend inactive share link' });
+        }
+
+        const base = share.expiresAt && share.expiresAt > new Date() ? share.expiresAt : new Date();
+        share.expiresAt = new Date(base.getTime() + minutes * 60 * 1000);
+        await share.save();
+
+        emitShareUpdated(req, share);
+
+        res.json({
+            token: share.token,
+            expiresAt: share.expiresAt,
+            isActive: share.isActive,
+            accessType: share.accessType || 'limited',
+            status: getShareStatus(share),
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -97,21 +326,21 @@ router.get('/:token', async (req, res) => {
 // @access  Private
 router.delete('/:token', auth, async (req, res) => {
     try {
-        const shareLink = await ShareLink.findOne({ token: req.params.token });
+        const share = await ShareLink.findOne({ token: req.params.token });
 
-        if (!shareLink) {
+        if (!share) {
             return res.status(404).json({ msg: 'Share link not found' });
         }
 
-        // Verify user owns the contact
-        const contact = await Contact.findById(shareLink.contactId);
+        const contact = await Contact.findById(share.contactId);
         if (!contact || contact.userId.toString() !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
-        // Revoke the link
-        shareLink.isActive = false;
-        await shareLink.save();
+        share.isActive = false;
+        await share.save();
+
+        emitShareUpdated(req, share, 'expired');
 
         res.json({ msg: 'Share link revoked successfully' });
 

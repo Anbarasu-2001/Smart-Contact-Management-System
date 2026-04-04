@@ -20,16 +20,14 @@ const Register = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [user, setUser] = useState({
         name: '',
+        phone: '',
         email: '',
         password: '',
         confirmPassword: '',
     });
 
-    const { name, email, password, confirmPassword } = user;
-    const [mounted, setMounted] = useState(false);
-
+    const { name, phone, email, password, confirmPassword } = user;
     useEffect(() => {
-        setMounted(true);
         if (isAuthenticated) {
             router.push('/');
         }
@@ -41,15 +39,17 @@ const Register = () => {
         // eslint-disable-next-line
     }, [error, isAuthenticated, router]);
 
-    if (!mounted) return null;
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setUser({ ...user, [e.target.name]: e.target.value });
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (name === '' || email === '' || password === '') {
+        if (name === '' || phone === '' || email === '' || password === '') {
             if (setAlert) setAlert('Please enter all fields', 'danger');
+            setIsSubmitting(false);
+        } else if (password.length < 6) {
+            if (setAlert) setAlert('Password must be at least 6 characters', 'danger');
             setIsSubmitting(false);
         } else if (password !== confirmPassword) {
             if (setAlert) setAlert('Passwords do not match', 'danger');
@@ -59,6 +59,7 @@ const Register = () => {
             if (register) {
                 const success = await register({
                     name,
+                    phone,
                     email,
                     password,
                 });
@@ -70,67 +71,105 @@ const Register = () => {
     };
 
     return (
-        <div className="flex justify-center items-center mt-10">
-            <Card className="w-full max-w-md p-4">
-                <CardHeader className="flex justify-center pb-0">
-                    <h1 className="text-2xl font-bold">
-                        Account <span className="text-primary">Register</span>
-                    </h1>
-                </CardHeader>
-                <CardBody>
-                    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="w-full h-full flex items-center justify-center pt-8 pb-16">
+            <div className="relative w-full max-w-md p-8 sm:p-10 rounded-[2rem] glass border border-slate-200/60 dark:border-slate-800/60 shadow-2xl shadow-violet-500/5 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl animate-fade-in group">
+                <div className="absolute -top-12 -left-12 w-40 h-40 bg-violet-400/20 dark:bg-violet-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-violet-400/30 transition-colors duration-500" />
+                <div className="absolute -bottom-12 -right-12 w-40 h-40 bg-indigo-400/20 dark:bg-indigo-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-indigo-400/30 transition-colors duration-500" />
+                
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center text-white shadow-xl shadow-violet-500/20 mb-6">
+                        <i className="fas fa-user-plus text-2xl" />
+                    </div>
+                    <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 mb-2 tracking-tight text-center">Create Account</h1>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 text-center">Join SmartContact today</p>
+                    
+                    <form onSubmit={onSubmit} className="w-full space-y-4">
                         <Input
-                            label="Name"
+                            label="Full Name"
+                            placeholder="Enter your name"
                             name="name"
                             type="text"
                             value={name}
                             onChange={onChange}
                             required
-                            variant="bordered"
+                            variant="faded"
+                            size="md"
+                            classNames={{ inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm" }}
+                            startContent={<i className="fas fa-user text-slate-400 mr-2" />}
+                        />
+                        <Input
+                            label="Phone Number"
+                            placeholder="+91XXXXXXXXXX"
+                            name="phone"
+                            type="tel"
+                            value={phone}
+                            onChange={onChange}
+                            required
+                            variant="faded"
+                            size="md"
+                            classNames={{ inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm" }}
+                            startContent={<i className="fas fa-phone text-slate-400 mr-2" />}
                         />
                         <Input
                             label="Email Address"
+                            placeholder="Enter your email"
                             name="email"
                             type="email"
                             value={email}
                             onChange={onChange}
                             required
-                            variant="bordered"
+                            variant="faded"
+                            size="md"
+                            classNames={{ inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm" }}
+                            startContent={<i className="fas fa-envelope text-slate-400 mr-2" />}
                         />
                         <Input
                             label="Password"
+                            placeholder="Min 6 characters"
                             name="password"
                             type="password"
                             value={password}
                             onChange={onChange}
                             required
                             minLength={6}
-                            variant="bordered"
+                            variant="faded"
+                            size="md"
+                            classNames={{ inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm" }}
+                            startContent={<i className="fas fa-lock text-slate-400 mr-2" />}
                         />
                         <Input
                             label="Confirm Password"
+                            placeholder="Re-enter your password"
                             name="confirmPassword"
                             type="password"
                             value={confirmPassword}
                             onChange={onChange}
                             required
                             minLength={6}
-                            variant="bordered"
+                            variant="faded"
+                            size="md"
+                            classNames={{ inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm" }}
+                            startContent={<i className="fas fa-check-double text-slate-400 mr-2" />}
                         />
+                        
                         <Button
-                            color="primary"
                             type="submit"
                             isLoading={isSubmitting}
-                            className="w-full font-bold text-lg"
+                            size="lg"
+                            className="w-full font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white shadow-md shadow-violet-500/20 hover:shadow-lg hover:shadow-violet-500/30 hover:-translate-y-0.5 transition-all mt-4"
                         >
-                            {isSubmitting ? 'Registering...' : 'Register'}
+                            {isSubmitting ? 'Creating...' : 'Create Account'}
                         </Button>
                     </form>
-                </CardBody>
-                <CardFooter className="justify-center">
-                    <p className="text-sm">Already have an account? <Link href="/login" className="text-primary hover:underline">Login</Link></p>
-                </CardFooter>
-            </Card>
+
+                    <div className="mt-8 text-sm font-medium text-slate-500 dark:text-slate-400">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-violet-600 dark:text-violet-400 hover:text-violet-500 transition-colors">
+                            Sign in
+                        </Link>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

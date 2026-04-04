@@ -46,7 +46,7 @@ const AlertStateProvider = (props: AlertStateProps) => {
 
     // Set Alert
     // Set Alert
-    const setAlert = React.useCallback((msg: string, type: string, timeout = 5000) => {
+    const setAlert = (msg: string, type: string, timeout = 5000) => {
         const id = uuidv4();
         dispatch({
             type: SET_ALERT,
@@ -54,7 +54,7 @@ const AlertStateProvider = (props: AlertStateProps) => {
         });
 
         setTimeout(() => dispatch({ type: REMOVE_ALERT, payload: id }), timeout);
-    }, []);
+    };
 
     return (
         <AlertContext.Provider

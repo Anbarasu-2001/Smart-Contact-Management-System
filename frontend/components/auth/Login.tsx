@@ -24,10 +24,7 @@ const Login = () => {
     });
 
     const { email, password } = user;
-    const [mounted, setMounted] = useState(false);
-
     useEffect(() => {
-        setMounted(true);
         if (isAuthenticated) {
             router.push('/');
         }
@@ -39,7 +36,6 @@ const Login = () => {
         // eslint-disable-next-line
     }, [error, isAuthenticated, router]);
 
-    if (!mounted) return null;
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
         setUser({ ...user, [e.target.name]: e.target.value });
@@ -64,47 +60,68 @@ const Login = () => {
     };
 
     return (
-        <div className="flex justify-center items-center mt-10">
-            <Card className="w-full max-w-md p-4">
-                <CardHeader className="flex justify-center pb-0">
-                    <h1 className="text-2xl font-bold">
-                        Account <span className="text-primary">Login</span>
-                    </h1>
-                </CardHeader>
-                <CardBody>
-                    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="w-full h-full flex items-center justify-center pt-10 pb-20">
+            <div className="relative w-full max-w-md p-8 sm:p-10 rounded-[2rem] glass border border-slate-200/60 dark:border-slate-800/60 shadow-2xl shadow-cyan-500/5 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl animate-fade-in group">
+                <div className="absolute -top-12 -left-12 w-40 h-40 bg-blue-400/20 dark:bg-blue-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-blue-400/30 transition-colors duration-500" />
+                <div className="absolute -bottom-12 -right-12 w-40 h-40 bg-cyan-400/20 dark:bg-cyan-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-cyan-400/30 transition-colors duration-500" />
+                
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-xl shadow-cyan-500/20 mb-6">
+                        <i className="fas fa-layer-group text-2xl" />
+                    </div>
+                    <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 mb-2 tracking-tight text-center">Welcome Back</h1>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 text-center">Sign in to your SmartContact account</p>
+                    
+                    <form onSubmit={onSubmit} className="w-full space-y-5">
                         <Input
                             label="Email Address"
+                            placeholder="Enter your email"
                             name="email"
                             type="email"
                             value={email}
                             onChange={onChange}
                             required
-                            variant="bordered"
+                            variant="faded"
+                            size="lg"
+                            classNames={{
+                                inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm",
+                            }}
+                            startContent={<i className="fas fa-envelope text-slate-400 mr-2" />}
                         />
                         <Input
                             label="Password"
+                            placeholder="Enter your password"
                             name="password"
                             type="password"
                             value={password}
                             onChange={onChange}
                             required
-                            variant="bordered"
+                            variant="faded"
+                            size="lg"
+                            classNames={{
+                                inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm",
+                            }}
+                            startContent={<i className="fas fa-lock text-slate-400 mr-2" />}
                         />
+                        
                         <Button
-                            color="primary"
                             type="submit"
                             isLoading={isSubmitting}
-                            className="w-full font-bold text-lg"
+                            size="lg"
+                            className="w-full font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all mt-4"
                         >
-                            {isSubmitting ? 'Logging in...' : 'Login'}
+                            {isSubmitting ? 'Signing in...' : 'Sign In'}
                         </Button>
                     </form>
-                </CardBody>
-                <CardFooter className="justify-center">
-                    <p className="text-sm">Don't have an account? <Link href="/register" className="text-primary hover:underline">Register</Link></p>
-                </CardFooter>
-            </Card>
+
+                    <div className="mt-8 text-sm font-medium text-slate-500 dark:text-slate-400">
+                        Don't have an account?{' '}
+                        <Link href="/register" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors">
+                            Create one now
+                        </Link>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

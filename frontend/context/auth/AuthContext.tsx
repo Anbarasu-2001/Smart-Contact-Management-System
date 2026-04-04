@@ -106,7 +106,7 @@ const AuthStateProvider = (props: AuthStateProps) => {
     const [state, dispatch] = useReducer(authReducer, initialState);
 
     // Load User
-    const loadUser = React.useCallback(async () => {
+    const loadUser = async () => {
         const token = localStorage.getItem('token');
         if (!token) {
             dispatch({ type: AUTH_ERROR });
@@ -125,7 +125,7 @@ const AuthStateProvider = (props: AuthStateProps) => {
             dispatch({ type: AUTH_ERROR });
             return false;
         }
-    }, []);
+    };
 
     // Persist token check on mount
     useEffect(() => {
@@ -139,7 +139,7 @@ const AuthStateProvider = (props: AuthStateProps) => {
     }, []);
 
     // Register User
-    const register = React.useCallback(async (formData: any) => {
+    const register = async (formData: any) => {
         const config = {
             headers: {
                 'Content-Type': 'application/json',
@@ -172,10 +172,10 @@ const AuthStateProvider = (props: AuthStateProps) => {
             setAuthToken(null);
             return false;
         }
-    }, [loadUser]);
+    };
 
     // Login User
-    const login = React.useCallback(async (formData: any) => {
+    const login = async (formData: any) => {
         const config = {
             headers: {
                 'Content-Type': 'application/json',
@@ -208,17 +208,17 @@ const AuthStateProvider = (props: AuthStateProps) => {
             setAuthToken(null);
             return false;
         }
-    }, [loadUser]);
+    };
 
     // Logout
-    const logout = React.useCallback(() => {
+    const logout = () => {
         localStorage.removeItem('token');
         setAuthToken(null);
         dispatch({ type: LOGOUT });
-    }, []);
+    };
 
     // Clear Errors
-    const clearErrors = React.useCallback(() => dispatch({ type: CLEAR_ERRORS }), []);
+    const clearErrors = () => dispatch({ type: CLEAR_ERRORS });
 
     return (
         <AuthContext.Provider
