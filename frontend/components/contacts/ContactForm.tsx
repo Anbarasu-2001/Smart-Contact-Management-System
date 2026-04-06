@@ -134,12 +134,12 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSaved, onCancel }) => {
     };
 
     return (
-        <form onSubmit={onSubmit} className="space-y-6">
+        <form onSubmit={onSubmit} className="flex flex-col gap-6">
             <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                 <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
                     {current ? 'Edit Contact' : 'Add Contact'}
                 </h2>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Save contacts for chat and call instantly.</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Save contacts for chat and call instantly.</p>
             </div>
 
             {formError && (
@@ -149,7 +149,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSaved, onCancel }) => {
                 </div>
             )}
 
-            <div className="space-y-4">
+            <div className="flex flex-col gap-6">
                 <Input
                     label="Name"
                     placeholder="Enter full name"
@@ -188,7 +188,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSaved, onCancel }) => {
                 />
 
                 <div className="pt-1">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Relationship Label</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Relationship Label</p>
                     <div className="grid grid-cols-3 gap-3">
                         {relationshipOptions.map((option) => {
                             const isSelected = contact.relationshipType === option.key;
@@ -197,10 +197,10 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSaved, onCancel }) => {
                                     key={option.key}
                                     type="button"
                                     className={`relative overflow-hidden rounded-xl border px-3 py-2.5 text-sm font-medium flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${
-                                        isSelected
-                                            ? 'border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 -translate-y-0.5'
-                                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-400 dark:hover:bg-slate-900/60'
-                                    }`}
+ isSelected
+ ? 'border-cyan-500 bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 -translate-y-0.5'
+ : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-400 dark:hover:bg-slate-900/60'
+ }`}
                                     onClick={() => setContact({ ...contact, relationshipType: option.key as any })}
                                 >
                                     <i className={`fas ${option.icon} ${isSelected ? 'scale-110' : 'opacity-80'} transition-transform`} />

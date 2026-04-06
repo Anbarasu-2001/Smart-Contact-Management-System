@@ -20,19 +20,19 @@ const DashboardInsights = () => {
     }, [isAuthenticated]);
 
     if (loading || !dashboardStats) {
-        return <div className="text-center my-4 text-slate-300">Loading Insights...</div>;
+        return <div className="text-center text-slate-300">Loading Insights...</div>;
     }
 
     // Cast because dashboardStats intnerface in Context might be minimal
     const { totalContacts, activeContacts, inactiveContacts, reconnectSuggestions } = dashboardStats as any;
 
     return (
-        <Card className="glass-card mb-6">
+        <Card className="glass-card">
             <CardHeader className="justify-between pb-0">
                 <h2 className="text-xl font-bold neon-title w-full text-center">Dashboard Insights</h2>
             </CardHeader>
             <CardBody>
-                <div className="grid grid-cols-3 gap-4 text-center mb-4">
+                <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="p-2">
                         <h3 className="text-2xl font-bold text-cyan-300">{totalContacts}</h3>
                         <p className="text-sm text-slate-300">Total</p>
@@ -48,9 +48,9 @@ const DashboardInsights = () => {
                 </div>
 
                 {reconnectSuggestions && reconnectSuggestions.length > 0 && (
-                    <div className="mt-4 border-t pt-2 border-cyan-400/20">
-                        <h4 className="text-md font-semibold mb-2">Reconnect Suggestions</h4>
-                        <ul className="space-y-2">
+                    <div className="border-t pt-2 border-cyan-400/20">
+                        <h4 className="text-md font-semibold">Reconnect Suggestions</h4>
+                        <ul className="flex flex-col gap-6">
                             {reconnectSuggestions.map((contact: any) => (
                                 <li
                                     key={contact._id}

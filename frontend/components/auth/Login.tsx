@@ -65,14 +65,14 @@ const Login = () => {
                 <div className="absolute -top-12 -left-12 w-40 h-40 bg-blue-400/20 dark:bg-blue-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-blue-400/30 transition-colors duration-500" />
                 <div className="absolute -bottom-12 -right-12 w-40 h-40 bg-cyan-400/20 dark:bg-cyan-600/20 blur-3xl rounded-full z-0 pointer-events-none group-hover:bg-cyan-400/30 transition-colors duration-500" />
                 
-                <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-xl shadow-cyan-500/20 mb-6">
+                <div className="relative z-10 flex flex-col items-center gap-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-xl shadow-cyan-500/20">
                         <i className="fas fa-layer-group text-2xl" />
                     </div>
-                    <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 mb-2 tracking-tight text-center">Welcome Back</h1>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 text-center">Sign in to your SmartContact account</p>
+                    <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 tracking-tight text-center">Welcome Back</h1>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">Sign in to your SmartContact account</p>
                     
-                    <form onSubmit={onSubmit} className="w-full space-y-5">
+                    <form onSubmit={onSubmit} className="w-full flex flex-col gap-6">
                         <Input
                             label="Email Address"
                             placeholder="Enter your email"
@@ -86,7 +86,7 @@ const Login = () => {
                             classNames={{
                                 inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm",
                             }}
-                            startContent={<i className="fas fa-envelope text-slate-400 mr-2" />}
+                            startContent={<i className="fas fa-envelope text-slate-400" />}
                         />
                         <Input
                             label="Password"
@@ -101,20 +101,20 @@ const Login = () => {
                             classNames={{
                                 inputWrapper: "bg-slate-50 dark:bg-slate-900/50 shadow-sm",
                             }}
-                            startContent={<i className="fas fa-lock text-slate-400 mr-2" />}
+                            startContent={<i className="fas fa-lock text-slate-400" />}
                         />
                         
                         <Button
                             type="submit"
                             isLoading={isSubmitting}
                             size="lg"
-                            className="w-full font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all mt-4"
+                            className="w-full font-semibold bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all"
                         >
                             {isSubmitting ? 'Signing in...' : 'Sign In'}
                         </Button>
                     </form>
 
-                    <div className="mt-8 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
                         Don't have an account?{' '}
                         <Link href="/register" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 transition-colors">
                             Create one now
@@ -127,3 +127,5 @@ const Login = () => {
 };
 
 export default Login;
+
+

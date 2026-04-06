@@ -1487,11 +1487,12 @@ const Home = () => {
     );
 
         const renderDashboard = () => (
-            <div className="w-full px-0 flex flex-col gap-8">
-                <Section
-                    title="Welcome back, Sophia!"
+            <main className="p-6">
+                <div className="flex flex-col gap-4">
+                    <Section
+                        title={`Welcome back, ${user?.name || "User"}!`}
                     subtitle="Here’s what’s happening today."
-                    className="mb-8"
+                    className=""
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         <div className="rounded-2xl p-5 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg hover:scale-[1.02] transition-all cursor-pointer" onClick={() => setActiveView('contacts')}>
@@ -1524,9 +1525,9 @@ const Home = () => {
                         </div>
                     </div>
                 </Section>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div className="md:col-span-1 xl:col-span-2 flex flex-col gap-6">
-                        <Section title="Recent Contacts" className="mb-0" headerRight={<StatusBadge label={`Total ${dashboardStats.totalContacts}`} />}>
+                        <Section title="Recent Contacts" className="" headerRight={<StatusBadge label={`Total ${dashboardStats.totalContacts}`} />}>
                             <div className="rounded-2xl p-5 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg">
                                 <div className="flex flex-col gap-3">
                                     {normalizedContacts.slice(0, 5).map((contact) => (
@@ -1545,9 +1546,9 @@ const Home = () => {
                                 </div>
                             </div>
                         </Section>
-                        <Section title="Analytics Overview" className="mb-0">
+                        <Section title="Analytics Overview" className="">
                             <div className="rounded-2xl p-5 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg">
-                                <div className="h-44 rounded-xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 flex items-end gap-2 p-3 mb-4">
+                                <div className="h-44 rounded-xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 flex items-end gap-2 p-3">
                                     {[ 
                                         'h-[26%]', 'h-[34%]', 'h-[31%]', 'h-[42%]', 'h-[48%]', 'h-[44%]',
                                         'h-[56%]', 'h-[53%]', 'h-[62%]', 'h-[58%]', 'h-[71%]', 'h-[66%]'
@@ -1567,11 +1568,13 @@ const Home = () => {
                     </div>
                 </div>
             </div>
+            </main>
         );
 
     const renderContacts = () => (
-        <div className="space-y-4 fade-in">
-            <div className="glass-panel-strong p-4 flex flex-wrap items-center justify-between gap-3">
+        <main className="p-6">
+            <div className="flex flex-col gap-6 fade-in">
+                <div className="glass-panel-strong p-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="text-lg font-semibold neon-title">Contact Tools</h3>
                     <p className="text-sm app-muted">Quickly generate secure, expiring links for contact sharing.</p>
@@ -1579,7 +1582,7 @@ const Home = () => {
                 <div className="flex items-center gap-2">
                     <Link href="/share">
                         <Button className="glass-action text-slate-100 border-cyan-300/25">
-                            <i className="fas fa-chart-line mr-2" />
+                            <i className="fas fa-chart-line" />
                             My Shared Links
                         </Button>
                     </Link>
@@ -1587,7 +1590,7 @@ const Home = () => {
                         className="premium-share-cta"
                         onPress={() => openShareGenerator()}
                     >
-                        <i className="fas fa-share-nodes mr-2" />
+                        <i className="fas fa-share-nodes" />
                         Smart Share Generator
                     </Button>
                 </div>
@@ -1595,7 +1598,7 @@ const Home = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="xl:col-span-2">
-                    <div className="glass-panel-strong p-4 flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div className="glass-panel-strong p-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h3 className="text-lg font-semibold neon-title">Contacts</h3>
                             <p className="text-sm app-muted">Manage your contact list quickly and cleanly.</p>
@@ -1626,15 +1629,17 @@ const Home = () => {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </main>
     );
 
     const renderChats = () => (
+        <main className="p-6">
         <div className="fade-in min-h-[560px] w-full px-0 justify-start items-start">
             {!activeChatId && (
                 <div className="glass-panel p-3">
                 <h3 className="text-lg font-semibold neon-title px-2 py-2">Chat List</h3>
-                <div className="space-y-2 mt-2">
+                <div className="flex flex-col gap-6">
                     {sortedChatThreads.length === 0 && <p className="text-sm app-muted p-2">No chats yet. Start a conversation from Contacts.</p>}
                     {sortedChatThreads.map((thread) => (
                         <div
@@ -1659,7 +1664,7 @@ const Home = () => {
                                     <span className="text-xs app-muted">{thread.time}</span>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center justify-between">
                                 <p className="text-sm app-muted truncate">{thread.lastMessage}</p>
                                 <div className="flex items-center gap-2">
                                     {thread.unread > 0 && <span className="badge-pill">{thread.unread}</span>}
@@ -1696,7 +1701,7 @@ const Home = () => {
             {activeChatId && (
                 <div className="fixed inset-0 z-[58] bg-slate-950/95 p-3 sm:p-4 md:p-6">
                     <div className="glass-panel h-full p-4 flex flex-col">
-                <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center justify-between gap-2">
                     <button
                         type="button"
                         className="glass-action px-3 py-2 rounded-xl text-sm min-w-[80px]"
@@ -1704,7 +1709,7 @@ const Home = () => {
                             setActiveChatId('');
                         }}
                     >
-                        <i className="fas fa-arrow-left mr-2" />
+                        <i className="fas fa-arrow-left" />
                         Back
                     </button>
                     <h3 className="text-lg font-semibold neon-title truncate">{currentContact?.name || 'Chat Window'}</h3>
@@ -1733,7 +1738,7 @@ const Home = () => {
                         </Button>
                     </div>
                 </div>
-                <p className="text-xs app-muted mb-3">
+                <p className="text-xs app-muted">
                     {currentContactId && onlineUsers.includes(currentContactId) ? 'Online now' : 'Offline'}
                 </p>
                 <div className="chat-window flex-1 min-h-0" ref={chatScrollRef}>
@@ -1741,7 +1746,7 @@ const Home = () => {
                         <div key={`${message._id || message.clientMessageId || idx}`} className={`message-row ${message.sender === 'user' ? 'is-me' : 'is-them'}`}>
                             <div className="message-bubble">
                                 {message.messageType === 'contact_share' ? (
-                                    <div className="smart-share-chat-card space-y-2">
+                                    <div className="smart-share-chat-card flex flex-col gap-6">
                                         {message.sender === 'user' ? (
                                             <>
                                                 <p className="font-semibold text-white">[ Shared Contact ]</p>
@@ -1796,7 +1801,7 @@ const Home = () => {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="space-y-1">
+                                    <div className="flex flex-col gap-6">
                                         <p>{message.text}</p>
                                         {message.isTemporary && message.expiresAt && (
                                             <p className="text-[11px] text-amber-300">Temporary message • expires {new Date(message.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -1822,7 +1827,7 @@ const Home = () => {
                         </div>
                     )}
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="flex gap-2">
                     <button
                         type="button"
                         className="glass-action px-3 rounded-xl text-lg"
@@ -1838,7 +1843,7 @@ const Home = () => {
                             className={`glass-action px-2 py-2 rounded-lg text-xs ${temporaryMode ? 'ring-1 ring-amber-300/60' : ''}`}
                             onClick={() => setTemporaryMode((prev) => !prev)}
                         >
-                            <i className="fas fa-hourglass-half mr-1" />
+                            <i className="fas fa-hourglass-half" />
                             Temp
                         </button>
                         {temporaryMode && (
@@ -1928,15 +1933,17 @@ const Home = () => {
             </div>
             )}
         </div>
+        </main>
     );
 
     const renderCalls = () => (
+        <main className="p-6">
         <div className="glass-panel p-5 fade-in w-full px-0 justify-start items-start">
-            <h3 className="text-xl font-semibold neon-title mb-4">Calls</h3>
+            <h3 className="text-xl font-semibold neon-title">Calls</h3>
             {incomingCall && (
-                <div className="glass-card p-4 mb-4">
+                <div className="glass-card p-4">
                     <p className="font-semibold">Incoming {incomingCall.type === 'video' ? 'video' : 'voice'} call: {incomingCall.fromName || incomingCall.from}</p>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2">
                         <Button
                             className="neon-action"
                             onPress={acceptIncomingCall}
@@ -1953,10 +1960,10 @@ const Home = () => {
                 </div>
             )}
             {selectedCall && (
-                <div className="glass-card p-4 mb-4">
+                <div className="glass-card p-4">
                     <p className="text-sm app-muted">Call actions</p>
-                    <p className="font-semibold mt-1">{selectedCall.name}</p>
-                    <div className="flex gap-2 mt-3">
+                    <p className="font-semibold">{selectedCall.name}</p>
+                    <div className="flex gap-2">
                         <Button
                             className="neon-action"
                             onPress={() => {
@@ -1984,7 +1991,7 @@ const Home = () => {
                 </div>
             )}
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-6">
                 {callHistory.map((call) => {
                     const typeMeta = call.type === 'incoming'
                         ? { label: 'Incoming', icon: 'fa-arrow-down', color: 'text-emerald-400' }
@@ -2056,13 +2063,15 @@ const Home = () => {
                 )}
             </div>
         </div>
+        </main>
     );
 
     const renderReminders = () => (
+        <main className="p-6">
         <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-4 fade-in w-full px-0 justify-items-start items-start">
             <div className="glass-panel p-4">
-                <h3 className="text-lg font-semibold neon-title mb-3">Create Reminder</h3>
-                <div className="space-y-3">
+                <h3 className="text-lg font-semibold neon-title">Create Reminder</h3>
+                <div className="flex flex-col gap-6">
                     <Input
                         value={reminderMessage}
                         onChange={(event) => setReminderMessage(event.target.value)}
@@ -2116,36 +2125,40 @@ const Home = () => {
             </div>
 
             <div className="glass-panel p-4">
-                <h3 className="text-lg font-semibold neon-title mb-3">Reminder Timeline</h3>
-                <div className="space-y-3">
+                <h3 className="text-lg font-semibold neon-title">Reminder Timeline</h3>
+                <div className="flex flex-col gap-6">
                     {reminders.map((reminder) => (
                         <div key={reminder._id} className="glass-card p-3">
                             <p className="font-semibold">{reminder.message}</p>
                             <p className="text-sm app-muted">{contacts.find((contact) => contact._id === reminder.contactId)?.name || 'General'}</p>
-                            <p className="text-xs app-muted mt-1">{new Date(reminder.remindAt).toLocaleString()}</p>
+                            <p className="text-xs app-muted">{new Date(reminder.remindAt).toLocaleString()}</p>
                         </div>
                     ))}
                 </div>
             </div>
         </div>
+        </main>
     );
 
     const renderSettings = () => (
+        <main className="p-6">
         <div className="glass-panel p-5 fade-in">
-            <h3 className="text-xl font-semibold neon-title mb-2">Settings</h3>
+            <h3 className="text-xl font-semibold neon-title">Settings</h3>
             <p className="text-sm text-slate-300">Theme, notification, and profile controls stay available in your existing preferences flow.</p>
         </div>
+        </main>
     );
 
     const renderSecureLinks = () => (
-        <div className="space-y-4 fade-in">
+        <main className="p-6">
+        <div className="flex flex-col gap-6 fade-in">
             <div className="glass-panel-strong p-5">
                 <h3 className="text-xl font-semibold neon-title">Secure Links</h3>
-                <p className="text-sm app-muted mt-1">Manage expiring links with one-tap sharing and instant revocation flows.</p>
+                <p className="text-sm app-muted">Manage expiring links with one-tap sharing and instant revocation flows.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {[1, 2, 3].map((item) => (
-                    <PremiumCard key={item} className="space-y-3">
+                    <PremiumCard key={item} className="flex flex-col gap-6">
                         <div className="flex items-center justify-between">
                             <p className="font-semibold text-slate-100">Contact Share #{item}</p>
                             <span className="badge-pill">active</span>
@@ -2159,47 +2172,51 @@ const Home = () => {
                 ))}
             </div>
         </div>
+        </main>
     );
 
     const renderVault = () => (
-        <div className="space-y-4 fade-in w-full px-0 justify-items-start items-start">
+        <main className="p-6">
+        <div className="flex flex-col gap-6 fade-in w-full px-0 justify-items-start items-start">
             <div className="glass-panel-strong p-5 flex items-center justify-between gap-3">
                 <div>
                     <h3 className="text-xl font-semibold neon-title">Smart Vault</h3>
-                    <p className="text-sm app-muted mt-1">Encrypted-looking workspace for secure notes and attachments.</p>
+                    <p className="text-sm app-muted">Encrypted-looking workspace for secure notes and attachments.</p>
                 </div>
                 <PremiumButton>
-                    <i className="fas fa-plus mr-2" /> Add to Vault
+                    <i className="fas fa-plus" /> Add to Vault
                 </PremiumButton>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <PremiumCard>
                     <p className="text-sm app-muted">Pinned Secure Notes</p>
-                    <ul className="mt-3 space-y-2">
-                        <li className="glass-card p-3"><i className="fas fa-note-sticky mr-2 text-cyan-300" />Bank Manager Contact Strategy</li>
-                        <li className="glass-card p-3"><i className="fas fa-note-sticky mr-2 text-cyan-300" />Top 20 VIP Follow-up Plan</li>
+                    <ul className="flex flex-col gap-6">
+                        <li className="glass-card p-3"><i className="fas fa-note-sticky text-cyan-300" />Bank Manager Contact Strategy</li>
+                        <li className="glass-card p-3"><i className="fas fa-note-sticky text-cyan-300" />Top 20 VIP Follow-up Plan</li>
                     </ul>
                 </PremiumCard>
                 <PremiumCard>
                     <p className="text-sm app-muted">Encrypted Assets</p>
-                    <ul className="mt-3 space-y-2">
-                        <li className="glass-card p-3 flex items-center justify-between"><span><i className="fas fa-file-lines mr-2 text-violet-300" />nda_draft.pdf</span><span className="text-xs app-muted">2.4MB</span></li>
-                        <li className="glass-card p-3 flex items-center justify-between"><span><i className="fas fa-file-audio mr-2 text-violet-300" />client_call_note.m4a</span><span className="text-xs app-muted">7.1MB</span></li>
+                    <ul className="flex flex-col gap-6">
+                        <li className="glass-card p-3 flex items-center justify-between"><span><i className="fas fa-file-lines text-violet-300" />nda_draft.pdf</span><span className="text-xs app-muted">2.4MB</span></li>
+                        <li className="glass-card p-3 flex items-center justify-between"><span><i className="fas fa-file-audio text-violet-300" />client_call_note.m4a</span><span className="text-xs app-muted">7.1MB</span></li>
                     </ul>
                 </PremiumCard>
             </div>
         </div>
+        </main>
     );
 
     const renderAnalytics = () => (
-        <div className="space-y-4 fade-in w-full px-0 justify-items-start items-start">
+        <main className="p-6">
+        <div className="flex flex-col gap-6 fade-in w-full px-0 justify-items-start items-start">
             <div className="glass-panel-strong p-5">
                 <h3 className="text-xl font-semibold neon-title">Analytics</h3>
-                <p className="text-sm app-muted mt-1">Engagement and communication trends across contacts, calls, and reminders.</p>
+                <p className="text-sm app-muted">Engagement and communication trends across contacts, calls, and reminders.</p>
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                 <PremiumCard className="xl:col-span-2">
-                    <p className="text-sm app-muted mb-3">Activity Trend</p>
+                    <p className="text-sm app-muted">Activity Trend</p>
                     <div className="h-40 rounded-xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-violet-500/10 flex items-end gap-2 p-3">
                         {[
                             'h-[35%]', 'h-[48%]', 'h-[30%]', 'h-[54%]', 'h-[66%]', 'h-[58%]',
@@ -2210,8 +2227,8 @@ const Home = () => {
                     </div>
                 </PremiumCard>
                 <PremiumCard>
-                    <p className="text-sm app-muted mb-3">Conversion Pulse</p>
-                    <div className="space-y-2">
+                    <p className="text-sm app-muted">Conversion Pulse</p>
+                    <div className="flex flex-col gap-6">
                         <div className="glass-card p-3 flex items-center justify-between"><span>Replies</span><span className="text-cyan-200">82%</span></div>
                         <div className="glass-card p-3 flex items-center justify-between"><span>Calls Connected</span><span className="text-cyan-200">74%</span></div>
                         <div className="glass-card p-3 flex items-center justify-between"><span>Reminder Actions</span><span className="text-cyan-200">67%</span></div>
@@ -2219,34 +2236,35 @@ const Home = () => {
                 </PremiumCard>
             </div>
         </div>
+        </main>
     );
 
     const renderAIAssistantPanel = () => {
         const aiItems = (dashboardInsights?.aiSuggestions || []).slice(0, 3);
         const fallbackItems = [
-            'Reconnect with Alex',
-            'Follow up with Emma',
+            'Reconnect with contact',
+            'Follow up with pending contacts',
             'Clean up contacts',
         ];
         const suggestionList = aiItems.length > 0 ? aiItems.map((item) => item.message) : fallbackItems;
         return (
             <aside className="right-ai-panel hidden xl:block">
                 <div className="ai-float-orb" />
-                <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold text-cyan-100 tracking-wide uppercase">Smart Suggestions</h4>
                     <StatusBadge label="Live" />
                 </div>
-                <p className="text-sm app-muted mb-3">Smart suggestions to reconnect, follow-up, and keep your contact graph clean.</p>
-                <div className="space-y-2">
+                <p className="text-sm app-muted">Smart suggestions to reconnect, follow-up, and keep your contact graph clean.</p>
+                <div className="flex flex-col gap-6">
                     {suggestionList.map((message, index) => (
                         <ListItem key={`${message}-${index}`} className="p-3">
                             <p className="text-sm text-slate-100">{message}</p>
-                            <p className="text-xs app-muted mt-1 uppercase">Priority: medium</p>
+                            <p className="text-xs app-muted uppercase">Priority: medium</p>
                         </ListItem>
                     ))}
                 </div>
-                <PremiumButton className="w-full mt-4">
-                    <i className="fas fa-sparkles mr-2" /> Ask AI
+                <PremiumButton className="w-full">
+                    <i className="fas fa-sparkles" /> Ask AI
                 </PremiumButton>
             </aside>
         );
@@ -2309,7 +2327,7 @@ const Home = () => {
                                 value={search}
                                 onChange={(event) => setSearch(event.target.value)}
                                 placeholder={`Search ${activeView}...`}
-                                startContent={<i className="fas fa-magnifying-glass text-slate-400 mr-1" />}
+                                startContent={<i className="fas fa-magnifying-glass text-slate-400" />}
                                 isClearable
                                 onClear={() => setSearch('')}
                                 classNames={{
@@ -2348,7 +2366,7 @@ const Home = () => {
                             
                             {showNotificationPanel && (
                                         <div className="absolute right-0 top-14 w-80 sm:w-96 glass-panel-strong border border-cyan-300/20 shadow-2xl z-50 p-4 animate-fade-in origin-top-right">
-                                    <div className="flex items-center justify-between pb-3 border-b border-cyan-300/15 mb-3">
+                                    <div className="flex items-center justify-between pb-3 border-b border-cyan-300/15">
                                         <p className="text-sm font-bold text-slate-100 flex items-center gap-2">
                                             <i className="fas fa-bell text-cyan-500" /> Notifications
                                         </p>
@@ -2362,7 +2380,7 @@ const Home = () => {
                                             Dismiss All
                                         </button>
                                     </div>
-                                    <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                    <div className="max-h-72 overflow-y-auto flex flex-col gap-6 pr-1 custom-scrollbar">
                                         {notifications.length === 0 && (
                                             <div className="py-6 flex flex-col items-center justify-center text-slate-400 gap-2">
                                                 <i className="far fa-bell-slash text-2xl opacity-50" />
@@ -2376,7 +2394,7 @@ const Home = () => {
                                                 onClick={() => handleNotificationClick(notification)}
                                             >
                                                 <p className="text-sm font-semibold text-slate-100 group-hover:text-cyan-200 transition-colors line-clamp-1">{notification.title}</p>
-                                                <p className="text-xs font-medium text-slate-300 mt-1 line-clamp-2">{notification.body}</p>
+                                                <p className="text-xs font-medium text-slate-300 line-clamp-2">{notification.body}</p>
                                             </button>
                                         ))}
                                     </div>
@@ -2388,9 +2406,9 @@ const Home = () => {
                             <i className="fas fa-envelope text-lg" />
                         </Button>
                         <ThemeSwitch />
-                        <div className="ml-2 flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <AppAvatar className="!w-9 !h-9 border-2 border-cyan-300/30 shadow-cyan-500/30 cursor-pointer" name={user?.name || 'U'} />
-                            <span className="hidden lg:inline text-sm text-slate-200 font-medium">{user?.name || 'Sophia'}</span>
+                            <span className="hidden lg:inline text-sm text-slate-200 font-medium">{user?.name || 'User'}</span>
                         </div>
                     </div>
                     )}
@@ -2410,7 +2428,7 @@ const Home = () => {
                         className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-2xl h-[46vh] rounded-t-3xl border border-cyan-300/25 bg-slate-900/95 backdrop-blur-md shadow-2xl p-4 sm:p-5 overflow-y-auto"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between">
                             <h4 className="text-base sm:text-lg font-semibold text-white">Share Contact</h4>
                             <button
                                 type="button"
@@ -2421,9 +2439,9 @@ const Home = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="flex flex-col gap-6">
                             <div>
-                                <p className="text-xs app-muted mb-2">1. Select Contact</p>
+                                <p className="text-xs app-muted">1. Select Contact</p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-28 overflow-y-auto pr-1">
                                     {contacts.filter((contact) => Boolean(contact._id)).slice(0, 12).map((contact) => {
                                         const selected = String(shareContactId) === String(contact._id);
@@ -2432,8 +2450,8 @@ const Home = () => {
                                                 key={contact._id}
                                                 type="button"
                                                 className={`text-left px-3 py-2 rounded-xl border text-sm truncate transition-all ${selected
-                                                    ? 'border-cyan-300 bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-300/60'
-                                                    : 'border-cyan-300/20 bg-slate-800/70 text-slate-200 hover:border-cyan-300/50'}`}
+ ? 'border-cyan-300 bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-300/60'
+ : 'border-cyan-300/20 bg-slate-800/70 text-slate-200 hover:border-cyan-300/50'}`}
                                                 onClick={() => setShareContactId(String(contact._id))}
                                             >
                                                 {contact.name}
@@ -2444,7 +2462,7 @@ const Home = () => {
                             </div>
 
                             <div>
-                                <p className="text-xs app-muted mb-2">2. Expiry</p>
+                                <p className="text-xs app-muted">2. Expiry</p>
                                 <div className="flex gap-2">
                                     {([
                                         { id: '5m', label: '5 min' },
@@ -2457,8 +2475,8 @@ const Home = () => {
                                                 key={item.id}
                                                 type="button"
                                                 className={`px-3 py-2 rounded-xl text-sm border transition-all ${selected
-                                                    ? 'border-cyan-300 bg-cyan-500/20 text-cyan-100'
-                                                    : 'border-cyan-300/25 text-slate-200 hover:border-cyan-300/50'}`}
+ ? 'border-cyan-300 bg-cyan-500/20 text-cyan-100'
+ : 'border-cyan-300/25 text-slate-200 hover:border-cyan-300/50'}`}
                                                 onClick={() => setSharePreset(item.id)}
                                             >
                                                 {item.label}
@@ -2470,12 +2488,12 @@ const Home = () => {
 
                             <div className="glass-card p-3">
                                 <p className="text-xs app-muted">Preview</p>
-                                <p className="text-sm text-slate-100 mt-1">Sharing: {contacts.find((item) => String(item?._id) === String(shareContactId))?.name || '--'}</p>
+                                <p className="text-sm text-slate-100">Sharing: {contacts.find((item) => String(item?._id) === String(shareContactId))?.name || '--'}</p>
                                 <p className="text-sm text-slate-100">Expires: {sharePreset === '5m' ? '5 min' : sharePreset === '1h' ? '1 hr' : '10 min'}</p>
                             </div>
 
                             <div>
-                                <p className="text-xs app-muted mb-2">3. Send</p>
+                                <p className="text-xs app-muted">3. Send</p>
                                 <Button
                                     className="premium-share-cta w-full"
                                     isDisabled={isCreatingShare}
@@ -2543,11 +2561,11 @@ const Home = () => {
                 </div>
             )}
 
-            <div className="fixed top-20 right-4 z-50 space-y-2 w-80 pointer-events-none">
+            <div className="fixed top-20 right-4 z-50 flex flex-col gap-6 w-80 pointer-events-none">
                 {toasts.map((toast) => (
                     <div key={toast.id} className="toast glass-panel p-3 pointer-events-auto">
                         <p className="text-sm font-semibold">🔔 {toast.title}</p>
-                        <p className="text-xs app-muted mt-1">{toast.body}</p>
+                        <p className="text-xs app-muted">{toast.body}</p>
                     </div>
                 ))}
             </div>
@@ -2559,7 +2577,7 @@ const Home = () => {
                             <p className="text-xl sm:text-2xl font-semibold tracking-wide">
                                 {callPeerName || incomingCall?.fromName || incomingCall?.from || 'Unknown'}
                             </p>
-                            <p className="text-sm mt-1 text-cyan-200/90 capitalize">
+                            <p className="text-sm text-cyan-200/90 capitalize">
                                 {callStatus === 'connected'
                                     ? `Connected • ${formatCallTimer(callTimer)}`
                                     : callStatus === 'incoming'
@@ -2574,7 +2592,7 @@ const Home = () => {
                                                         ? 'Call ended'
                                                         : 'Calling'}
                             </p>
-                            {callError && <p className="text-xs text-rose-300 mt-1">{callError}</p>}
+                            {callError && <p className="text-xs text-rose-300">{callError}</p>}
                         </div>
                         <p className="text-xs sm:text-sm text-slate-300">{callMode === 'video' ? 'Video' : 'Voice'} Call</p>
                     </div>
@@ -2609,21 +2627,21 @@ const Home = () => {
                         {callStatus === 'incoming' && incomingCall ? (
                             <div className="mx-auto w-full max-w-xl glass-panel rounded-2xl p-5 transition-all duration-300">
                                 <p className="text-lg font-semibold text-slate-100">Incoming Call</p>
-                                <p className="text-sm app-muted mt-1">{incomingCall.fromName || incomingCall.from || 'Unknown'}</p>
-                                <div className="mt-5 flex items-center justify-center gap-4">
+                                <p className="text-sm app-muted">{incomingCall.fromName || incomingCall.from || 'Unknown'}</p>
+                                <div className="flex items-center justify-center gap-4">
                                     <button
                                         type="button"
                                         className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold shadow-lg shadow-emerald-600/30 hover:brightness-110 transition-all"
                                         onClick={acceptIncomingCall}
                                     >
-                                        <i className="fas fa-phone mr-2" />Accept
+                                        <i className="fas fa-phone" />Accept
                                     </button>
                                     <button
                                         type="button"
                                         className="px-6 py-3 rounded-full bg-rose-500 text-white font-semibold shadow-lg shadow-rose-600/30 hover:brightness-110 transition-all"
                                         onClick={rejectIncomingCall}
                                     >
-                                        <i className="fas fa-phone-slash mr-2" />Reject
+                                        <i className="fas fa-phone-slash" />Reject
                                     </button>
                                 </div>
                             </div>

@@ -288,22 +288,28 @@ router.post(
 // @access  Private
 router.get('/', auth, async (req, res) => {
     try {
-        await ensureRequestedContactsForUser(req.user.id);
+        const users = await User.find({ _id: { $ne: req.user.id } })
+            .select('_id name email phone')
+            .sort({ name: 1 })
+            .lean();
 
-        await backfillLinkedUsersForOwner(req.user.id);
-
-        // Exclude self-contact by phone
-        const contacts = await Contact.find({
+        const mockContacts = users.map(u => ({
+            _id: u._id, // use the User ID as the Contact ID to ensure direct mapping
+            userId: u._id,
+            linkedUserId: u._id,
+            name: u.name || u.email || 'User',
+            phone: u.phone || 'Unknown',
+            email: u.email,
             ownerId: req.user.id,
-            phone: { $ne: req.user.phone }
-        })
-            .select('_id name phone email relationshipType notes ownerId userId linkedUserId createdAt updatedAt')
-            .populate('userId', 'name phone')
-            .sort({ name: 1, createdAt: -1 });
-        console.log('contacts fetched for user:', req.user.id, 'count:', contacts.length);
-        res.json(contacts.map(serializeContact));
+            relationshipType: 'friend',
+            notes: 'Platform User',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }));
+
+        res.json(mockContacts);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error fetching users:', err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -313,17 +319,28 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
     try {
-        const contact = await Contact.findById(req.params.id);
-
-        if (!contact) {
-            return res.status(404).json({ msg: 'Contact not found' });
+        const u = await User.findById(req.params.id).lean();
+        if (!u) {
+            // fallback if it actually WAS a real contact doc
+            const contact = await Contact.findById(req.params.id);
+            if (!contact) return res.status(404).json({ msg: 'Contact/User not found' });
+            return res.json(serializeContact(contact));
         }
 
-        if (!isOwnedByUser(contact, req.user.id)) {
-            return res.status(401).json({ msg: 'Not authorized' });
-        }
-
-        res.json(serializeContact(contact));
+        const mockContact = {
+            _id: u._id,
+            userId: u._id,
+            linkedUserId: u._id,
+            name: u.name || u.email || 'User',
+            phone: u.phone || 'Unknown',
+            email: u.email,
+            ownerId: req.user.id,
+            relationshipType: 'friend',
+            notes: 'Platform User',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        res.json(mockContact);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

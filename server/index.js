@@ -37,20 +37,19 @@ connectDB();
 // Init Middleware
 app.use(express.json());
 
-
 // --- CORS for development: allow localhost:3000 and custom headers ---
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: "http://localhost:3000",
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
 }));
 
 // --- Manual CORS headers to ensure x-auth-token is always allowed ---
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type,x-auth-token,Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
@@ -425,23 +424,36 @@ io.on('connection', (socket) => {
         expiresAt: message.expiresAt || null,
       };
 
-      io.to(getChatRoom(userId, contactId)).emit('new-message', payload);
-      io.to(getChatRoom(userId, contactId)).emit('receiveMessage', payload);
-      io.to(getChatRoom(userId, contactId)).emit('message-delivered', {
-        messageId: message._id,
-        contactId,
-      });
-      emitUserNotification(contactId, {
-        type: 'message',
-        title: 'New Message',
-        body: normalizedMessageType === 'contact_share'
-          ? (safeText || `Shared contact: ${sharedContactName || 'Contact'}`)
-          : safeText,
-        senderId: userId,
-        contactId,
-      });
+      
+        const receivingUserId = contact.linkedUserId ? String(contact.linkedUserId) : null;
+        
+        io.to(getChatRoom(userId, contactId)).emit('new-message', payload);
+        io.to(getChatRoom(userId, contactId)).emit('receiveMessage', payload);
+        
+        // Broadcast the message directly to the remote user's socket room if they are online
+        if (receivingUserId) {
+            io.to(`user:${receivingUserId}`).emit('receiveMessage', payload);
+            io.to(`user:${receivingUserId}`).emit('newMessage', payload);
+            io.to(`user:${receivingUserId}`).emit('new-message', payload);
+            
+            // Generate notification for the receiving user, NOT the sender
+            emitUserNotification(receivingUserId, {
+                type: 'message',
+                title: 'New Message',
+                body: normalizedMessageType === 'contact_share'
+                    ? (safeText || `Shared contact: ${sharedContactName || 'Contact'}`)
+                    : safeText,
+                senderId: userId,
+                contactId: String(contact._id),
+            });
+        }
+        
+        io.to(getChatRoom(userId, contactId)).emit('message-delivered', {
+          messageId: message._id,
+          contactId,
+        });
 
-      await trackInteraction({
+        await trackInteraction({
         userId,
         contactId,
         type: 'message_sent',

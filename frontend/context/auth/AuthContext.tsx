@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useReducer, createContext, ReactNode, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import {
     REGISTER_SUCCESS,
     REGISTER_FAIL,
@@ -115,13 +115,14 @@ const AuthStateProvider = (props: AuthStateProps) => {
         setAuthToken(token);
 
         try {
-            const res = await axios.get('http://localhost:5000/api/auth/user');
+            const res = await api.get('/auth/user');
             dispatch({
                 type: USER_LOADED,
                 payload: res.data,
             });
             return true;
-        } catch (err) {
+        } catch (err: any) {
+            console.error('loadUser error:', err.message);
             dispatch({ type: AUTH_ERROR });
             return false;
         }
@@ -138,20 +139,9 @@ const AuthStateProvider = (props: AuthStateProps) => {
         }
     }, []);
 
-    // Register User
     const register = async (formData: any) => {
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        };
-
         try {
-            const res = await axios.post(
-                'http://localhost:5000/api/auth/register',
-                formData,
-                config
-            );
+            const res = await api.post('/auth/register', formData);
 
             const token = res.data.token;
             localStorage.setItem('token', token);
@@ -164,6 +154,7 @@ const AuthStateProvider = (props: AuthStateProps) => {
 
             return await loadUser();
         } catch (err: any) {
+            console.error('Registration failed:', err.message);
             dispatch({
                 type: REGISTER_FAIL,
                 payload: err.response?.data?.msg || 'Registration failed',
@@ -174,20 +165,9 @@ const AuthStateProvider = (props: AuthStateProps) => {
         }
     };
 
-    // Login User
     const login = async (formData: any) => {
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        };
-
         try {
-            const res = await axios.post(
-                'http://localhost:5000/api/auth/login',
-                formData,
-                config
-            );
+            const res = await api.post('/auth/login', formData);
 
             const token = res.data.token;
             localStorage.setItem('token', token);
@@ -200,6 +180,7 @@ const AuthStateProvider = (props: AuthStateProps) => {
 
             return await loadUser();
         } catch (err: any) {
+            console.error('Login failed:', err.message);
             dispatch({
                 type: LOGIN_FAIL,
                 payload: err.response?.data?.msg || 'Login failed',

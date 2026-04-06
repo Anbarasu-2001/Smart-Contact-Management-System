@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useReducer, createContext, ReactNode } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import {
     GET_CONTACTS,
     ADD_CONTACT,
@@ -216,30 +216,14 @@ const ContactStateProvider = (props: ContactStateProps) => {
 
     // Get Contacts
     const getContacts = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            dispatch({
-                type: CONTACT_ERROR,
-                payload: '401 Unauthorized - token missing',
-            });
-            dispatch({
-                type: GET_CONTACTS,
-                payload: [],
-            });
-            return;
-        }
-
         try {
-            const res = await axios.get('http://localhost:5000/api/contacts', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const res = await api.get('/contacts');
             dispatch({
                 type: GET_CONTACTS,
                 payload: Array.isArray(res.data) ? res.data : [],
             });
-        } catch (err) {
+        } catch (err: any) {
+            console.error('getContacts error:', err.message);
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
@@ -287,13 +271,14 @@ const ContactStateProvider = (props: ContactStateProps) => {
     // Delete Contact
     const deleteContact = async (id: string) => {
         try {
-            await axios.delete(`http://localhost:5000/api/contacts/${id}`, getAuthConfig());
+            await api.delete(`/contacts/${id}`);
             dispatch({
                 type: DELETE_CONTACT,
                 payload: id,
             });
             return true;
-        } catch (err) {
+        } catch (err: any) {
+            console.error('deleteContact error:', err.message);
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
@@ -307,20 +292,15 @@ const ContactStateProvider = (props: ContactStateProps) => {
         // Ensure id is present for update
         if (!contact._id) return null;
 
-        const config = getAuthConfig();
-
         try {
-            const res = await axios.put(
-                `http://localhost:5000/api/contacts/${contact._id}`,
-                contact,
-                config
-            );
+            const res = await api.put(`/contacts/${contact._id}`, contact);
             dispatch({
                 type: UPDATE_CONTACT,
                 payload: res.data,
             });
             return res.data;
-        } catch (err) {
+        } catch (err: any) {
+            console.error('updateContact error:', err.message);
             dispatch({
                 type: CONTACT_ERROR,
                 payload: getErrorMessage(err),
@@ -352,12 +332,13 @@ const ContactStateProvider = (props: ContactStateProps) => {
     // Get Dashboard Stats
     const getDashboardStats = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/dashboard');
+            const res = await api.get('/dashboard');
             dispatch({
                 type: GET_DASHBOARD_STATS,
                 payload: res.data,
             });
-        } catch (err) {
+        } catch (err: any) {
+            console.error('getDashboardStats error:', err.message);
             dispatch({
                 type: DASHBOARD_ERROR,
                 payload: getErrorMessage(err),

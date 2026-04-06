@@ -6,6 +6,7 @@ import { AuthContext } from '../../context/auth/AuthContext';
 import { AlertContext } from '../../context/alert/AlertContext';
 import ContactItem from './ContactItem';
 import ContactForm from './ContactForm';
+import { BookOpen } from 'lucide-react';
 // import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 type ContactActionTarget = {
@@ -55,7 +56,7 @@ const Contacts = ({ onOpenChat, onVoiceCall, onVideoCall }: ContactsProps) => {
 
         const ok = await deleteContact(contact._id);
         if (ok) {
-            setAlert?.('🗑 Contact deleted', 'success');
+            setAlert?.('Contact deleted', 'success');
             return;
         }
         setAlert?.('Delete failed', 'danger');
@@ -63,10 +64,10 @@ const Contacts = ({ onOpenChat, onVoiceCall, onVideoCall }: ContactsProps) => {
 
     if (!loading && visibleContacts.length === 0) {
         return (
-            <div className="glass-panel p-6 text-center text-slate-300 mt-4">
-                <i className="fas fa-address-book text-2xl text-cyan-300/80 mb-2" />
+            <div className="glass-panel p-6 text-center text-slate-300 flex flex-col items-center justify-center">
+                <BookOpen className="w-8 h-8 text-cyan-300/80 mb-2" />
                 <h4 className="font-semibold text-slate-100">No contacts available</h4>
-                <p className="text-sm app-muted mt-1">Create your first contact to start messaging and calling in real-time.</p>
+                <p className="text-sm app-muted">Create your first contact to start messaging and calling in real-time.</p>
             </div>
         );
     }
@@ -76,7 +77,7 @@ const Contacts = ({ onOpenChat, onVoiceCall, onVideoCall }: ContactsProps) => {
             <div className="glass-panel-strong p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="text-lg sm:text-xl font-semibold neon-title">Your Contact Network</h3>
-                    <p className="text-sm app-muted mt-1">Organized, searchable, and ready for instant communication.</p>
+                    <p className="text-sm app-muted">Organized, searchable, and ready for instant communication.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="badge-pill">Total {totalContacts}</span>
@@ -97,7 +98,7 @@ const Contacts = ({ onOpenChat, onVoiceCall, onVideoCall }: ContactsProps) => {
                     />
                 ))
             ) : (
-                <div className="glass-panel p-5 text-center mt-4 text-slate-300">Loading contacts...</div>
+                <div className="glass-panel p-5 text-center text-slate-300">Loading contacts...</div>
             )}
 
             {showEditModal && (

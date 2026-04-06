@@ -16,9 +16,9 @@ const Alerts = () => {
                 <Card
                     key={alert.id}
                     className={`w-full max-w-[400px] ${alert.type === 'danger' ? 'bg-danger-50 text-danger-600' :
-                            alert.type === 'success' ? 'bg-success-50 text-success-600' :
-                                'bg-default-50'
-                        }`}
+ alert.type === 'success' ? 'bg-success-50 text-success-600' :
+ 'bg-default-50'
+ }`}
                 >
                     <CardBody>
                         <div className="flex items-center gap-2">

@@ -10,6 +10,10 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
 :root {
     --background: 210 40% 98%;
     --foreground: 222.2 47.4% 11.2%;
@@ -17,6 +21,8 @@
     --bg: #f8fafc;
     --card: #ffffff;
     --text: #0f172a;
+    --border: #e5e7eb;
+    --primary: #2563eb;
     --accent: linear-gradient(120deg, #60a5fa, #8b5cf6, #22d3ee);
     --neon-cyan: 34 211 238;
     --neon-blue: 59 130 246;
@@ -26,9 +32,11 @@
 .dark {
     --background: 217 33% 11%;
     --foreground: 210 40% 98%;
-    --bg: #0f172a;
-    --card: rgba(255, 255, 255, 0.05);
-    --text: #e2e8f0;
+    --bg: #0b1220;
+    --card: #111827;
+    --text: #e5e7eb;
+    --border: #1f2937;
+    --primary: #3b82f6;
     --accent: linear-gradient(120deg, #3b82f6, #8b5cf6, #22d3ee);
 }
 

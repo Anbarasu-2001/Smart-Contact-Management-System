@@ -1,0 +1,30 @@
+      <main className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 bg-[#f5f7fa] dark:bg-[#0f172a]">
+        {messages.map((msg) => {
+          const currentUserId = authUser?._id;
+
+          const senderId =
+            typeof msg.senderId === "object"
+              ? msg.senderId?._id
+              : msg.senderId;
+
+          const isMe = String(senderId) === String(currentUserId) || msg.sender === "user";
+
+          console.log("MESSAGE:", msg);
+          console.log("SENDER ID:", senderId);
+          console.log("USER ID:", currentUserId);
+          console.log("IS ME:", isMe);
+
+          return (
+            <div
+              key={msg._id}
+              className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`px-4 py-2.5 max-w-[75%] rounded-2xl text-[15px] shadow-sm
+ ${isMe
+ ? "bg-[#2874f0] text-white rounded-tr-sm"
+ : "bg-white dark:bg-[#1e293b] text-[#1f2937] dark:text-[#e2e8f0] rounded-tl-sm border border-slate-100 dark:border-slate-800"}`}
+              >
+                <p className="break-words font-normal">{msg.text}</p>
+                <span className={`text-[10px] block text-right font-medium ${isMe ? "text-blue-200" : "text-slate-400 dark:text-slate-500"}`}>
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

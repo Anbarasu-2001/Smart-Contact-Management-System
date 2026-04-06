@@ -56,13 +56,13 @@ const SharedView = () => {
         if (token) fetchSharedContact();
     }, [token]);
 
-    if (loading) return <div className="flex justify-center mt-10"><Spinner size="lg" /></div>;
+    if (loading) return <div className="flex justify-center"><Spinner size="lg" /></div>;
 
     if (error) return (
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center">
             <Card className="w-full max-w-md bg-danger-50 text-danger-600 p-4">
                 <p className="font-semibold">{isExpired ? 'This link has expired' : isInvalid ? 'Invalid link' : 'Unable to open shared contact'}</p>
-                <p className="text-sm mt-2">{error}</p>
+                <p className="text-sm">{error}</p>
             </Card>
         </div>
     );
@@ -103,7 +103,7 @@ const SharedView = () => {
     const disabled = actionState === 'loading' || expired || actionState === 'used' || actionState === 'invalid';
 
     return (
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center">
             <Card className="w-full max-w-md">
                 <CardHeader className="flex justify-between">
                     <h1 className="text-2xl font-bold text-primary">{contact?.name}</h1>
@@ -116,7 +116,7 @@ const SharedView = () => {
                         </Chip>
                         <span className="text-default-500">Expires: {contact?.expiresAt ? new Date(contact.expiresAt).toLocaleString() : '--'}</span>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500">
                         Only secure actions are allowed for this shared contact. Sensitive details remain hidden.
                     </p>
 

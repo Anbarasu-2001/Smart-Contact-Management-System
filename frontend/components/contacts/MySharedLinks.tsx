@@ -121,7 +121,7 @@ const MySharedLinks = () => {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-6">
             <Card className="glass-panel">
                 <CardHeader className="flex items-center justify-between">
                     <div>
@@ -130,7 +130,7 @@ const MySharedLinks = () => {
                     </div>
                     <Button className="glass-action" onPress={() => void loadLinks()}>Refresh</Button>
                 </CardHeader>
-                <CardBody className="space-y-3">
+                <CardBody className="flex flex-col gap-6">
                     {error && <p className="text-sm text-rose-300">{error}</p>}
                     {!hasItems && <p className="text-sm app-muted">No shared links created yet.</p>}
 
@@ -139,7 +139,7 @@ const MySharedLinks = () => {
                         const absoluteLink = `${window.location.origin}${item.shareLink}`;
 
                         return (
-                            <div key={item._id} className="glass-card p-3 space-y-2">
+                            <div key={item._id} className="glass-card p-3 flex flex-col gap-6">
                                 <div className="flex items-center justify-between gap-2">
                                     <p className="font-semibold truncate">{item.contactName}</p>
                                     <Chip className={meta.className}>{meta.label}</Chip>

@@ -25,8 +25,8 @@ const ContactFilter = () => {
     };
 
     return (
-        <form onSubmit={(e) => e.preventDefault()} className="mb-4 glass-panel p-3 sm:p-4">
-            <div className="flex items-center justify-between mb-2 px-1">
+        <form onSubmit={(e) => e.preventDefault()} className="glass-panel p-3 sm:p-4">
+            <div className="flex items-center justify-between px-1">
                 <p className="text-sm font-medium text-slate-200">Smart Search</p>
                 <p className="text-xs app-muted">Find by name, email, or phone</p>
             </div>

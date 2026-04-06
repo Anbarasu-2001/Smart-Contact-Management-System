@@ -23,7 +23,10 @@ class SocketService {
         this.userId = userId;
         this.token = token;
 
-        this.socket = io('http://localhost:5000', {
+        const isBrowser = typeof window !== "undefined";
+        const hostname = isBrowser ? window.location.hostname : "localhost";
+
+        this.socket = io(`http://${hostname}:5000`, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 10,

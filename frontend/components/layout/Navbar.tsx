@@ -1,39 +1,58 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/auth/AuthContext";
+import { useTheme } from "next-themes";
+import { Moon, Sun, Search, LogOut } from "lucide-react";
 
 export const Navbar = () => {
   const authContext = useContext(AuthContext);
+  const { theme, setTheme } = useTheme();
   const { user, logout } = authContext || {};
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
-    <div className="w-full h-16 flex items-center justify-between px-6 bg-slate-900 border-b border-white/10">
-      {/* LEFT */}
-      <div className="text-lg font-semibold text-white">
-        SmartContact
-      </div>
+    <header className="w-full h-16 border-b border-[var(--border)] flex items-center justify-between px-6 bg-[var(--card)] z-20">
+      <div className="font-semibold text-lg text-[var(--text)]">Dashboard</div>
 
-      {/* CENTER SEARCH */}
-      <div className="w-full max-w-md">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
+          type="text"
           placeholder="Search..."
-          className="bg-white/10 text-white px-3 py-1 rounded w-full"
+          className="border border-[var(--border)] rounded-lg px-3 py-1.5 pl-9 w-64 text-sm bg-transparent text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition"
         />
       </div>
 
-      {/* RIGHT */}
       <div className="flex items-center gap-4">
-        <span className="text-white">
-          Hello, {user?.name || "User"}
-        </span>
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 text-gray-500 dark:text-gray-400"
+          aria-label="Toggle Theme"
+        >
+          {mounted ? (
+            theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />
+          ) : (
+            <div className="w-[18px] h-[18px]" />
+          )}
+        </button>
+
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-sm">
+          {(user?.name || "U").charAt(0).toUpperCase()}
+        </div>
+
         <button
           onClick={logout}
-          className="px-4 py-1 rounded bg-blue-500 text-white"
+          className="p-2 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:scale-105"
+          title="Logout"
         >
-          Logout
+          <LogOut size={18} />
         </button>
       </div>
-    </div>
+    </header>
   );
 };

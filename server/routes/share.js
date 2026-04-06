@@ -92,7 +92,33 @@ const createShare = async (req, res, contactIdFromPath = null) => {
 // @route   POST api/share/create
 // @desc    Generate a secure share link
 // @access  Private
-router.post('/create', auth, async (req, res) => createShare(req, res));
+router.post('/create', auth, async (req, res) => {
+    const { contactId, receiverId } = req.body;
+
+    if (!contactId || !receiverId) {
+        return res.status(400).json({ msg: 'Missing data' });
+    }
+
+    try {
+        const token = crypto.randomBytes(24).toString('hex');
+        const share = await ShareLink.create({
+            senderId: req.user.id,
+            contactId,
+            receiverId,
+            token,
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000), // Default 1 hour
+            isActive: true,
+        });
+
+        res.json({
+            link: `http://localhost:3000/share/${share.token}`,
+            token: share.token
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 // Backward-compatible endpoint currently used in existing UI
 router.post('/:contactId', auth, async (req, res) => createShare(req, res, req.params.contactId));
@@ -116,7 +142,7 @@ router.get('/mine', auth, async (req, res) => {
                 shareLink: `/share/${share.token}`,
                 senderId: share.senderId,
                 receiverId: share.receiverId?._id || share.receiverId,
-                receiverName: share.receiverId?.name || 'Unknown User',
+                receiverName: share.receiverId?.name || share.receiverId?.email || 'Unknown User',
                 contactId: share.contactId?._id || share.contactId,
                 contactName: share.contactId?.name || 'Unknown Contact',
                 createdAt: share.createdAt,

@@ -230,24 +230,24 @@ const ShareGeneratorPage = () => {
     }, [generateAndSend]);
 
     return (
-        <div className="space-y-4 fade-in pb-28">
+        <div className="flex flex-col gap-6 fade-in pb-28">
             <section className="glass-panel p-5">
                 <h1 className="text-2xl font-bold neon-title">Contact Share Generator</h1>
-                <p className="text-sm app-muted mt-1">Pick contact, pick receiver, and send in seconds.</p>
+                <p className="text-sm app-muted">Pick contact, pick receiver, and send in seconds.</p>
             </section>
 
-            <section className="glass-panel p-5 border border-cyan-300/20 space-y-5">
+            <section className="glass-panel p-5 border border-cyan-300/20 flex flex-col gap-6">
                 <div>
-                    <p className="text-sm app-muted mb-2">Select Contact</p>
+                    <p className="text-sm app-muted">Select Contact</p>
                     <Input
                         value={contactSearch}
                         onChange={(event) => setContactSearch(event.target.value)}
                         placeholder="Search contact"
                     />
                     {selectedContact && (
-                        <p className="text-sm mt-2 text-emerald-300">Selected: {selectedContact.name} ✅</p>
+                        <p className="text-sm text-emerald-300">Selected: {selectedContact.name} ✅</p>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 max-h-52 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                         {filteredContacts.map((item) => {
                             const selected = String(item._id) === selectedContactId;
                             return (
@@ -267,8 +267,8 @@ const ShareGeneratorPage = () => {
                 </div>
 
                 <div>
-                    <p className="text-sm app-muted mb-2">Select Receiver</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                    <p className="text-sm app-muted">Select Receiver</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {recentReceivers.map((item) => {
                             const selected = item.id === receiverId;
                             return (
@@ -291,9 +291,9 @@ const ShareGeneratorPage = () => {
                         placeholder="Search receiver"
                     />
                     {selectedReceiver && (
-                        <p className="text-sm mt-2 text-cyan-200">To: {selectedReceiver.name}</p>
+                        <p className="text-sm text-cyan-200">To: {selectedReceiver.name}</p>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 max-h-48 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                         {filteredReceivers.map((item) => {
                             const selected = item.id === receiverId;
                             return (
@@ -313,7 +313,7 @@ const ShareGeneratorPage = () => {
                 </div>
 
                 <div>
-                    <p className="text-sm app-muted mb-2">⏱ Expiry</p>
+                    <p className="text-sm app-muted">⏱ Expiry</p>
                     <div className="grid grid-cols-3 gap-2">
                         {[
                             { key: '5m', label: '5 min' },
@@ -333,11 +333,11 @@ const ShareGeneratorPage = () => {
                 </div>
 
                 <div className="glass-card p-4 border border-cyan-300/20">
-                    <p className="font-semibold mb-2">Preview</p>
+                    <p className="font-semibold">Preview</p>
                     <p className="text-sm">Sharing: <span className="text-cyan-200">{selectedContact?.name || '--'}</span></p>
                     <p className="text-sm">To: <span className="text-cyan-200">{selectedReceiver?.name || '--'}</span></p>
                     <p className="text-sm">Expires: <span className="text-cyan-200">{expiresInMinutes} min</span></p>
-                    {expiresAt && <p className="text-xs app-muted mt-1">Until: {new Date(expiresAt).toLocaleTimeString()}</p>}
+                    {expiresAt && <p className="text-xs app-muted">Until: {new Date(expiresAt).toLocaleTimeString()}</p>}
                 </div>
             </section>
 

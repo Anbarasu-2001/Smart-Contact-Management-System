@@ -208,4 +208,17 @@ router.get('/user', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/auth/users
+// @desc    Get all users for sharing targets
+// @access  Private
+router.get('/users', auth, async (req, res) => {
+    try {
+        const users = await User.find({ _id: { $ne: req.user.id } }).select('name email _id');
+        res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
