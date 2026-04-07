@@ -21,10 +21,10 @@ const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
     origin: [
-      'http://localhost:3000', // Next.js/React dev server
+      'http://localhost:3000',
       'http://127.0.0.1:3000',
-      'http://localhost:5000', // Allow self for testing
-    ],
+      process.env.FRONTEND_URL, // Support Vercel production URL
+    ].filter(Boolean),
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -37,9 +37,9 @@ connectDB();
 // Init Middleware
 app.use(express.json());
 
-// --- CORS for development: allow localhost:3000 and custom headers ---
+// --- Production-ready CORS with FRONTEND_URL support ---
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
@@ -72,6 +72,15 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/ai-reminders', require('./routes/aiReminders'));
+ 
+ // Root route for health check / status
+ app.get('/', (req, res) => {
+   res.json({ 
+     status: "OK", 
+     message: "Smart Contact Management System API is running...", 
+     timestamp: new Date().toISOString() 
+   });
+ });
 
 const onlineUsers = new Map(); // Map of userId -> Set<socketId>
 const activeCalls = new Map(); // Map<callKey, { from, to, startedAt }>
