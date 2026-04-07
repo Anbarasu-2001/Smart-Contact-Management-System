@@ -20,11 +20,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      process.env.FRONTEND_URL, // Support Vercel production URL
-    ].filter(Boolean),
+    origin: true, // Dynamically match request origin
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -37,9 +33,9 @@ connectDB();
 // Init Middleware
 app.use(express.json());
 
-// --- Production-ready CORS with FRONTEND_URL support ---
+// --- Production-ready CORS: automatically match origin ---
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: true, 
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
