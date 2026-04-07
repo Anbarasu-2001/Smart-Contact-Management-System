@@ -1,1 +1,0 @@
-const fs = require("fs"); let c = fs.readFileSync("frontend/components/pages/Home.tsx", "utf8"); c = c.replace("Follow up with Emma", "Follow up with pending contacts"); fs.writeFileSync("frontend/components/pages/Home.tsx", c);

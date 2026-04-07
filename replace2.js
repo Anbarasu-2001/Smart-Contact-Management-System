@@ -1,1 +1,0 @@
-const fs = require("fs"); let c = fs.readFileSync("frontend/components/pages/Home.tsx", "utf8"); c = c.replace("title={Welcome back, !}", "title={`Welcome back, ${user?.name || \"User\"}!`}").replace("{user?.name ||  User }", "{user?.name || \"User\"}").replace("Reconnect with Alex", "Reconnect with past contact"); fs.writeFileSync("frontend/components/pages/Home.tsx", c);
