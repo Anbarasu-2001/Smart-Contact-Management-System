@@ -14,7 +14,7 @@ export default function SidebarClient() {
     { key: "home", label: "Chats", icon: MessageCircle, path: "/" },
     { key: "contact", label: "Contacts", icon: Users, path: "/contact" },
     { key: "reminders", label: "Reminders", icon: Bell, path: "/reminders" },
-    { key: "share", label: "Secure Links", icon: LinkIcon, path: "/share-generator" },
+    { key: "share", label: "Secure Links", icon: LinkIcon, path: "/secure-links" },
   ];
 
   return (

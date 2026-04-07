@@ -5,11 +5,8 @@ import { AuthContext } from '../../context/auth/AuthContext';
 import socketService from '../../utils/socketService';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter, usePathname } from 'next/navigation';
-import axios from 'axios';
 import api from '../../utils/api';
 // @ts-ignore
-
-axios.defaults.baseURL = "/api";
 
 export default function GlobalSocketListener() {
   const authContext = useContext(AuthContext);
@@ -139,13 +136,9 @@ export default function GlobalSocketListener() {
     const notifiedIds = new Set<string>();
 
     const checkReminders = async () => {
-      if (!authContext?.token) return;
-
       try {
         // Fetch reminders
-        const aiRes = await axios.get("/api/ai-reminders", {
-          headers: { Authorization: `Bearer ${authContext.token}` }
-        });
+        const aiRes = await api.get("/ai-reminders");
 
         const manRes = await api.get('/reminders');
 

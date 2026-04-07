@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Chip } from '@heroui/chip';
 import { Spinner } from '@heroui/spinner';
@@ -28,13 +28,6 @@ const SharedView = () => {
     const [loading, setLoading] = useState(true);
     const [actionState, setActionState] = useState<'idle' | 'loading' | 'expired' | 'used' | 'invalid'>('idle');
 
-    const getHeaders = () => {
-        const authToken = localStorage.getItem('token');
-        return {
-            'x-auth-token': authToken || '',
-            Authorization: authToken ? `Bearer ${authToken}` : '',
-        };
-    };
 
     const isExpired = error?.toLowerCase().includes('expired');
     const isInvalid = error?.toLowerCase().includes('invalid');
@@ -42,9 +35,7 @@ const SharedView = () => {
     useEffect(() => {
         const fetchSharedContact = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/share/${token}`, {
-                    headers: getHeaders(),
-                });
+                const res = await api.get(`/share/${token}`);
                 setContact(res.data);
                 setLoading(false);
             } catch (err: any) {
@@ -71,10 +62,9 @@ const SharedView = () => {
         if (!token || !contact) return;
         setActionState('loading');
         try {
-            const res = await axios.post(
-                `http://localhost:5000/api/share/${token}/access`,
-                { action },
-                { headers: getHeaders() },
+            const res = await api.post(
+                `/share/${token}/access`,
+                { action }
             );
 
             if (res?.data?.status === 'expired') {

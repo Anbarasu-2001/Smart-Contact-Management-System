@@ -7,7 +7,7 @@ const User = require('../models/User');
 
 const getPairRoom = (a, b) => `chat:${[String(a), String(b)].sort().join('_')}`;
 
-router.get('/conversations', auth, async (req, res) => {
+router.get('/summaries', auth, async (req, res) => {
     try {
         const currentUserId = String(req.user.id);
 

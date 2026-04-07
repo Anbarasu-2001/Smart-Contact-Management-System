@@ -25,8 +25,10 @@ class SocketService {
 
         const isBrowser = typeof window !== "undefined";
         const hostname = isBrowser ? window.location.hostname : "localhost";
+        const defaultUrl = `http://${hostname}:5000`;
+        const socketUrl = (process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || defaultUrl).replace(/\/api$/, '');
 
-        this.socket = io(`http://${hostname}:5000`, {
+        this.socket = io(socketUrl, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 10,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Button } from '@heroui/button';
 import { Chip } from '@heroui/chip';
@@ -36,21 +36,13 @@ const MySharedLinks = () => {
     const [error, setError] = useState<string | null>(null);
     const [busyToken, setBusyToken] = useState<string | null>(null);
 
-    const getHeaders = useCallback(() => {
-        const token = localStorage.getItem('token');
-        return {
-            'x-auth-token': token || '',
-            Authorization: token ? `Bearer ${token}` : '',
-        };
-    }, []);
+
 
     const loadLinks = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get('http://localhost:5000/api/share/mine', {
-                headers: getHeaders(),
-            });
+            const res = await api.get('/share/mine');
             setItems(Array.isArray(res.data) ? res.data : []);
         } catch (err: any) {
             setError(err?.response?.data?.msg || 'Unable to load shared links');
@@ -58,7 +50,7 @@ const MySharedLinks = () => {
         } finally {
             setLoading(false);
         }
-    }, [getHeaders]);
+    }, []);
 
     useEffect(() => {
         void loadLinks();
@@ -69,9 +61,7 @@ const MySharedLinks = () => {
     const onRevoke = async (token: string) => {
         try {
             setBusyToken(token);
-            await axios.delete(`http://localhost:5000/api/share/${token}`, {
-                headers: getHeaders(),
-            });
+            await api.delete(`/share/${token}`);
             await loadLinks();
         } catch {
             setError('Unable to revoke link');
@@ -83,10 +73,9 @@ const MySharedLinks = () => {
     const onExtend = async (token: string, minutes: number) => {
         try {
             setBusyToken(token);
-            await axios.patch(
-                `http://localhost:5000/api/share/${token}/extend`,
-                { minutes },
-                { headers: getHeaders() },
+            await api.patch(
+                `/share/${token}/extend`,
+                { minutes }
             );
             await loadLinks();
         } catch {
@@ -99,10 +88,9 @@ const MySharedLinks = () => {
     const onToggleOneTime = async (item: SharedLinkItem) => {
         try {
             setBusyToken(item.token);
-            await axios.patch(
-                `http://localhost:5000/api/share/${item.token}`,
-                { isOneTime: !item.isOneTime },
-                { headers: getHeaders() },
+            await api.patch(
+                `/share/${item.token}`,
+                { isOneTime: !item.isOneTime }
             );
             await loadLinks();
         } catch {

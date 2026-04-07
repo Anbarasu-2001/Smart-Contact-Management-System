@@ -3,7 +3,9 @@ import axios from 'axios';
 const setAuthToken = (token: string | null) => {
     // Set global baseURL if it's not already set
     if (!axios.defaults.baseURL) {
-        axios.defaults.baseURL = 'http://localhost:5000';
+        // Use the root URL (stripping /api if present in the environment variable)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        axios.defaults.baseURL = apiUrl.replace(/\/api$/, '');
     }
 
     if (token) {

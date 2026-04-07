@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@heroui/button';
 import { Input } from '@heroui/input';
@@ -25,13 +25,7 @@ type ReceiverOption = {
     subtitle: string;
 };
 
-const toAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-        'x-auth-token': token || '',
-        Authorization: token ? `Bearer ${token}` : '',
-    };
-};
+
 
 const ShareGeneratorPage = () => {
     const router = useRouter();
@@ -72,9 +66,7 @@ const ShareGeneratorPage = () => {
     useEffect(() => {
         const loadSummaries = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/messages/summaries', {
-                    headers: toAuthHeaders(),
-                });
+                const res = await api.get('/messages/summaries');
                 setChatSummaries(Array.isArray(res.data) ? res.data : []);
             } catch {
                 setChatSummaries([]);
@@ -180,15 +172,14 @@ const ShareGeneratorPage = () => {
 
         try {
             setIsSending(true);
-            const shareRes = await axios.post(
-                'http://localhost:5000/api/share/create',
+            const shareRes = await api.post(
+                '/share/create',
                 {
                     contactId: selectedContactId,
                     receiverId,
                     expiresInMinutes,
                     isOneTime: true,
-                },
-                { headers: toAuthHeaders() }
+                }
             );
 
             const payload = {

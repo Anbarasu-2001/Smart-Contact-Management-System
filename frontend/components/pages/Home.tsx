@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import Contacts from '../contacts/Contacts';
 import ContactForm from '../contacts/ContactForm';
 import ContactFilter from '../contacts/ContactFilter';
@@ -13,6 +13,17 @@ import Link from 'next/link';
 import { Input } from '@heroui/input';
 import { Button } from '@heroui/button';
 import { ThemeSwitch } from '../theme-switch';
+import { 
+    LayoutDashboard, 
+    Users, 
+    MessageSquare, 
+    Link as LinkIcon, 
+    Shield, 
+    PieChart, 
+    Phone, 
+    Bell, 
+    Settings 
+} from 'lucide-react';
 import socketService from '../../utils/socketService';
 import Card from '../design/Card';
 import Section from '../design/Section';
@@ -39,16 +50,16 @@ type ViewKey =
     | 'reminder'
     | 'settings';
 
-const navItems: Array<{ key: ViewKey; label: string; icon: string }> = [
-    { key: 'dashboard', label: 'Dashboard', icon: 'fa-chart-line' },
-    { key: 'contacts', label: 'Contacts', icon: 'fa-address-book' },
-    { key: 'chat', label: 'Chats', icon: 'fa-comments' },
-    { key: 'secure-links', label: 'Secure Links', icon: 'fa-link' },
-    { key: 'vault', label: 'Smart Vault', icon: 'fa-shield-halved' },
-    { key: 'analytics', label: 'Analytics', icon: 'fa-chart-pie' },
-    { key: 'calls', label: 'Calls', icon: 'fa-phone' },
-    { key: 'reminder', label: 'Reminders', icon: 'fa-bell' },
-    { key: 'settings', label: 'Settings', icon: 'fa-gear' },
+const navItems: Array<{ key: ViewKey; label: string; icon: React.ElementType }> = [
+    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { key: 'contacts', label: 'Contacts', icon: Users },
+    { key: 'chat', label: 'Chats', icon: MessageSquare },
+    { key: 'secure-links', label: 'Secure Links', icon: LinkIcon },
+    { key: 'vault', label: 'Smart Vault', icon: Shield },
+    { key: 'analytics', label: 'Analytics', icon: PieChart },
+    { key: 'calls', label: 'Calls', icon: Phone },
+    { key: 'reminder', label: 'Reminders', icon: Bell },
+    { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
 type ChatMessage = {
@@ -270,13 +281,7 @@ const Home = () => {
         }
     }, []);
 
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return {
-            'x-auth-token': token || '',
-            Authorization: token ? `Bearer ${token}` : '',
-        };
-    };
+
 
     const toShareMinutes = () => {
         if (sharePreset === '5m') return 5;
@@ -398,10 +403,9 @@ const Home = () => {
 
         setShareActionByToken((prev) => ({ ...prev, [token]: 'loading' }));
         try {
-            const res = await axios.post(
-                `http://localhost:5000/api/share/${token}/access`,
-                { action },
-                { headers: getAuthHeaders() }
+            const res = await api.post(
+                `/share/${token}/access`,
+                { action }
             );
             const status = String(res?.data?.status || 'active');
             if (status === 'expired') {
@@ -490,9 +494,7 @@ const Home = () => {
     const loadCallHistory = useCallback(async () => {
         if (!isAuthenticated) return;
         try {
-            const res = await axios.get('http://localhost:5000/api/interactions/calls', {
-                headers: getAuthHeaders(),
-            });
+            const res = await api.get('/interactions/calls');
             setCallHistory(Array.isArray(res.data) ? res.data : []);
         } catch {
             setCallHistory([]);
@@ -1042,9 +1044,7 @@ const Home = () => {
 
         const loadChatSummaries = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/messages/summaries', {
-                    headers: getAuthHeaders(),
-                });
+                const res = await api.get('/messages/summaries');
                 const normalized = (Array.isArray(res.data) ? res.data : []).map((summary: ChatSummary) => ({
                     ...summary,
                     name: getChatDisplayName(summary.userId, summary.name),
@@ -1386,15 +1386,11 @@ const Home = () => {
 
         const fetchMessages = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/messages/thread/${currentContactId}?limit=80`, {
-                    headers: getAuthHeaders(),
-                });
+                const res = await api.get(`/messages/thread/${currentContactId}?limit=80`);
                 setMessagesByContact((prev) => ({ ...prev, [currentContactId]: res.data }));
             } catch {
                 try {
-                    const fallback = await axios.get(`http://localhost:5000/api/messages/${currentContactId}?limit=80`, {
-                        headers: getAuthHeaders(),
-                    });
+                    const fallback = await api.get(`/messages/${currentContactId}?limit=80`);
                     setMessagesByContact((prev) => ({ ...prev, [currentContactId]: fallback.data }));
                 } catch {
                     setAlert?.('Unable to load chat messages', 'danger');
@@ -1410,9 +1406,7 @@ const Home = () => {
 
         const loadDashboard = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/dashboard', {
-                    headers: getAuthHeaders(),
-                });
+                const res = await api.get('/dashboard');
                 setDashboardInsights(res.data || null);
             } catch {
                 setDashboardInsights(null);
@@ -1421,9 +1415,7 @@ const Home = () => {
 
         const loadAiReminders = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/ai-reminders', {
-                    headers: getAuthHeaders(),
-                });
+                const res = await api.get('/ai-reminders');
                 setAiReminders(res.data || []);
             } catch {
                 setAiReminders([]);
@@ -1439,9 +1431,7 @@ const Home = () => {
         if (!isAuthenticated) return;
         const loadReminders = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/reminders', {
-                    headers: getAuthHeaders(),
-                });
+                const res = await api.get('/reminders');
                 setReminders(res.data || []);
             } catch {
                 setAlert?.('Unable to load reminders', 'danger');
@@ -2093,7 +2083,7 @@ const Home = () => {
                             if (!reminderMessage || !reminderContact || !reminderDateTime) return;
                             try {
                                 const matchedContact = contacts.find((contact) => contact.name.toLowerCase() === reminderContact.toLowerCase());
-                                const res = await axios.post('http://localhost:5000/api/reminders', {
+                                const res = await api.post('/reminders', {
                                     message: reminderMessage,
                                     contactId: matchedContact?._id,
                                     remindAt: reminderDateTime,
@@ -2516,15 +2506,14 @@ const Home = () => {
 
                                         try {
                                             setIsCreatingShare(true);
-                                            const res = await axios.post(
-                                                'http://localhost:5000/api/share/create',
+                                            const res = await api.post(
+                                                '/share/create',
                                                 {
                                                     contactId: shareContactId,
                                                     receiverId: activeChatId,
                                                     expiresInMinutes: minutes,
                                                     isOneTime: shareIsOneTime,
-                                                },
-                                                { headers: getAuthHeaders() }
+                                                }
                                             );
 
                                             const generated = {

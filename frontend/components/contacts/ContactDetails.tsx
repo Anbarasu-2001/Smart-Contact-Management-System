@@ -3,7 +3,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { ContactContext } from '../../context/contact/ContactContext';
 import { useRouter, useParams } from 'next/navigation';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Card, CardBody, CardHeader, CardFooter } from '@heroui/card';
 import { Button } from '@heroui/button';
 import { Chip } from '@heroui/chip';
@@ -28,12 +28,7 @@ const ContactDetails = () => {
     useEffect(() => {
         const ensureContact = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get(`/api/contacts/${id}`, {
-                    headers: {
-                        Authorization: token ? `Bearer ${token}` : '',
-                    },
-                });
+                const res = await api.get(`/contacts/${id}`);
                 if (setCurrent) {
                     setCurrent(res.data);
                 }
@@ -50,10 +45,7 @@ const ContactDetails = () => {
             if (!id) return;
             setLoadingMessages(true);
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get(`/api/messages/${id}`, {
-                    headers: { Authorization: token ? `Bearer ${token}` : '' },
-                });
+                const res = await api.get(`/messages/${id}`);
                 setMessages(res.data);
             } catch (err) {
                 setMessages([]);
@@ -69,10 +61,7 @@ const ContactDetails = () => {
             if (!id) return;
             setLoadingCalls(true);
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get('/api/interactions/calls', {
-                    headers: { Authorization: token ? `Bearer ${token}` : '' },
-                });
+                const res = await api.get('/interactions/calls');
                 const selectedUserId = String((current as any)?.userId || (current as any)?.linkedUserId || '');
                 const filteredCalls = (Array.isArray(res.data) ? res.data : []).filter((call: any) => {
                     const callContactId = String(call?.contactId || '');
@@ -90,14 +79,12 @@ const ContactDetails = () => {
     const handleInteractionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const config = { headers: { 'Content-Type': 'application/json' } };
-            await axios.post(
-                'http://localhost:5000/api/interactions',
+            await api.post(
+                '/interactions',
                 {
                     contactId: id,
                     ...newInteraction,
-                },
-                config
+                }
             );
 
             // fetchInteractions();

@@ -93,7 +93,7 @@ const createShare = async (req, res, contactIdFromPath = null) => {
 // @desc    Generate a secure share link
 // @access  Private
 router.post('/create', auth, async (req, res) => {
-    const { contactId, receiverId } = req.body;
+    const { contactId, receiverId, expiresInMinutes, isOneTime } = req.body;
 
     if (!contactId || !receiverId) {
         return res.status(400).json({ msg: 'Missing data' });
@@ -101,18 +101,30 @@ router.post('/create', auth, async (req, res) => {
 
     try {
         const token = crypto.randomBytes(24).toString('hex');
+        
+        let expireMins = 60;
+        if (expiresInMinutes && !isNaN(expiresInMinutes)) {
+            expireMins = parseInt(expiresInMinutes);
+        }
+
         const share = await ShareLink.create({
             senderId: req.user.id,
             contactId,
             receiverId,
             token,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000), // Default 1 hour
+            expiresAt: new Date(Date.now() + expireMins * 60 * 1000),
+            isOneTime: Boolean(isOneTime),
             isActive: true,
+            accessType: 'limited'
         });
 
         res.json({
             link: `http://localhost:3000/share/${share.token}`,
-            token: share.token
+            token: share.token,
+            expiresAt: share.expiresAt,
+            isActive: share.isActive,
+            receiverId: share.receiverId,
+            accessType: share.accessType
         });
     } catch (err) {
         console.error(err.message);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '@/utils/api';
 import { AuthContext } from '@/context/auth/AuthContext';
 import { Card, CardBody, CardHeader } from '@heroui/card';
 import { Input } from '@heroui/input';
@@ -43,8 +43,8 @@ export default function RemindersPage() {
     try {
       setLoading(true);
       const [manRes, aiRes] = await Promise.all([
-        axios.get('/api/reminders', { headers: { Authorization: `Bearer ${authContext?.token}` } }),
-        axios.get('/api/ai-reminders', { headers: { Authorization: `Bearer ${authContext?.token}` } }),
+        api.get('/reminders'),
+        api.get('/ai-reminders'),
       ]);
       setReminders(manRes.data);
       setAiReminders(aiRes.data);
@@ -60,10 +60,10 @@ export default function RemindersPage() {
     if (!message || !time) return;
     
     try {
-      const res = await axios.post('/api/reminders', {
+      const res = await api.post('/reminders', {
         message,
         remindAt: new Date(time).toISOString(), // user selects locally
-      }, { headers: { Authorization: `Bearer ${authContext?.token}` } });
+      });
       setReminders([...reminders, res.data]);
       setMessage('');
       setTime('');
@@ -74,7 +74,7 @@ export default function RemindersPage() {
 
   const toggleManual = async (id: string) => {
     try {
-      await axios.patch(`/api/reminders/${id}/toggle`, {}, { headers: { Authorization: `Bearer ${authContext?.token}` } });
+      await api.patch(`/reminders/${id}/toggle`, {});
       setReminders(reminders.map(r => r._id === id ? { ...r, isActive: !r.isActive } : r));
     } catch (err) {
       console.error(err);

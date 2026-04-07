@@ -203,17 +203,6 @@ const ContactStateProvider = (props: ContactStateProps) => {
 
     const [state, dispatch] = useReducer(contactReducer, initialState);
 
-    const getAuthConfig = React.useCallback(() => {
-        const token = localStorage.getItem('token');
-        return {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token || '',
-                Authorization: token ? `Bearer ${token}` : '',
-            },
-        };
-    }, []);
-
     // Get Contacts
     const getContacts = async () => {
         try {
@@ -230,27 +219,21 @@ const ContactStateProvider = (props: ContactStateProps) => {
             });
         }
     };
-
+ 
     // Add Contact
     const addContact = async (contact: Contact) => {
-        const config = getAuthConfig();
-
         try {
-            const res = await axios.post(
-                'http://localhost:5000/api/contacts',
-                contact,
-                config
-            );
+            const res = await api.post('/contacts', contact);
             // Backend now returns { contact, warning }
             const contactData = res.data.contact || res.data;
             dispatch({
                 type: ADD_CONTACT,
                 payload: contactData,
             });
-
+ 
             // Keep UI fast by inserting immediately, then sync canonical list from DB.
             void getContacts();
-
+ 
             // If there's a warning about similar contacts, show it
             if (res.data.warning) {
                 dispatch({
@@ -267,7 +250,7 @@ const ContactStateProvider = (props: ContactStateProps) => {
             return null;
         }
     };
-
+ 
     // Delete Contact
     const deleteContact = async (id: string) => {
         try {
@@ -286,12 +269,12 @@ const ContactStateProvider = (props: ContactStateProps) => {
             return false;
         }
     };
-
+ 
     // Update Contact
     const updateContact = async (contact: Contact) => {
         // Ensure id is present for update
         if (!contact._id) return null;
-
+ 
         try {
             const res = await api.put(`/contacts/${contact._id}`, contact);
             dispatch({
@@ -308,27 +291,27 @@ const ContactStateProvider = (props: ContactStateProps) => {
             return null;
         }
     };
-
+ 
     // Set Current Contact
     const setCurrent = (contact: Contact) => {
         dispatch({ type: SET_CURRENT, payload: contact });
     };
-
+ 
     // Clear Current Contact
     const clearCurrent = () => {
         dispatch({ type: CLEAR_CURRENT });
     };
-
+ 
     // Filter Contacts
     const filterContacts = (text: string) => {
         dispatch({ type: FILTER_CONTACTS, payload: text });
     };
-
+ 
     // Clear Filter
     const clearFilter = () => {
         dispatch({ type: CLEAR_FILTER });
     };
-
+ 
     // Get Dashboard Stats
     const getDashboardStats = async () => {
         try {
@@ -345,22 +328,13 @@ const ContactStateProvider = (props: ContactStateProps) => {
             });
         }
     };
-
+ 
     // Generate Share Link
     const generateShareLink = React.useCallback(async (contactId: string, expiryInMinutes: number) => {
-        const token = localStorage.getItem('token');
-        const config = {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': token,
-                Authorization: token ? `Bearer ${token}` : '',
-            },
-        };
         try {
-            const res = await axios.post(
-                'http://localhost:5000/api/share/create',
-                { contactId, expiresInMinutes: expiryInMinutes },
-                config
+            const res = await api.post(
+                '/share/create',
+                { contactId, expiresInMinutes: expiryInMinutes }
             );
             return res.data;
         } catch (err) {
