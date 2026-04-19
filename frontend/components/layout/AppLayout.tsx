@@ -1,39 +1,36 @@
-'use client';
-
-import React from 'react';
+"use client";
+import React from "react";
 
 type AppLayoutProps = {
-    sidebar: React.ReactNode;
-    topbar: React.ReactNode;
-    rightPanel?: React.ReactNode;
-    children: React.ReactNode;
+  sidebar: React.ReactNode;
+  topbar: React.ReactNode;
+  rightPanel?: React.ReactNode;
+  children: React.ReactNode;
 };
 
-export default function AppLayout({ sidebar, topbar, rightPanel, children }: AppLayoutProps) {
-    return (
-        <div className="bg-[#0F172A] dark:bg-[#0F172A] min-h-screen w-full flex flex-col">
-            <div className="flex flex-1 w-full">
-                {/* Sidebar: only visible on lg+ screens, overlay on mobile */}
-                <aside className="hidden lg:block w-[260px] h-full fixed left-0 top-0 z-30 bg-white/10 dark:bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col flex flex-col gap-6 py-6 px-4" style={{ minWidth: 256, maxWidth: 256 }}>{sidebar}</aside>
-                <div className="flex-1 lg:ml-[260px] flex flex-col min-h-screen">
-                    <header className="h-16 flex items-center w-full bg-transparent">{topbar}</header>
-                    <main className="flex-1 w-full flex">
-                        <div className="w-full flex-1 !max-w-none ! items-start justify-start">
-                            {children}
-                        </div>
-                        {/* Right panel: always visible on xl+ screens */}
-                        <aside className="hidden xl:block w-[320px] h-full sticky top-0 self-start">{rightPanel}</aside>
-                    </main>
-                </div>
-            </div>
-            {/* Responsive: sidebar drawer only on mobile */}
-            <div className="lg:hidden fixed inset-0 z-50">{sidebar}</div>
-            {/* Responsive: rightPanel below content on mobile/tablet */}
-            <div className="xl:hidden max-w-7xl mx-auto">{rightPanel}</div>
-            <footer className="w-full flex flex-col items-center justify-center py-4">
-                <span>Powered by</span>
-                <p className="text-cyan-300">HeroUI</p>
-            </footer>
-        </div>
-    );
+export default function AppLayout({
+  sidebar,
+  topbar,
+  rightPanel,
+  children,
+}: AppLayoutProps) {
+  return (
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#e0f7fa] via-[#f3e5f5] to-[#e3f2fd] text-gray-800 font-['Poppins']">
+      {sidebar}
+
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {topbar}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="flex gap-6 w-full min-h-full">
+            <div className="flex-1 flex flex-col gap-6">{children}</div>
+            {rightPanel && (
+              <aside className="hidden xl:flex w-80 shrink-0 flex-col gap-6">
+                {rightPanel}
+              </aside>
+            )}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 }

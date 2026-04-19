@@ -1,3 +1,26 @@
+    // WebRTC Signaling: Offer
+    socket.on('offer', (data) => {
+      const { to, from, offer, callMode } = data;
+      if (onlineUsers[to]) {
+        io.to(onlineUsers[to]).emit('offer', { from, to, offer, callMode });
+      }
+    });
+
+    // WebRTC Signaling: Answer
+    socket.on('answer', (data) => {
+      const { to, from, answer } = data;
+      if (onlineUsers[to]) {
+        io.to(onlineUsers[to]).emit('answer', { from, to, answer });
+      }
+    });
+
+    // WebRTC Signaling: ICE Candidate
+    socket.on('iceCandidate', (data) => {
+      const { to, from, candidate } = data;
+      if (onlineUsers[to]) {
+        io.to(onlineUsers[to]).emit('iceCandidate', { from, to, candidate });
+      }
+    });
 const { Server } = require('socket.io');
 const Contact = require('../models/Contact'); // added
 

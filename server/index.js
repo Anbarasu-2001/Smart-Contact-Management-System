@@ -1,3 +1,4 @@
+// ...existing code...
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
@@ -18,6 +19,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const server = http.createServer(app);
+
 const io = socketIO(server, {
   cors: {
     origin: true, // Dynamically match request origin
@@ -40,8 +42,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
 }));
-
-// --- Manual CORS headers to ensure x-auth-token is always allowed ---
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -59,6 +59,12 @@ app.use((req, res, next) => {
 //   allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
 // }));
 
+
+// File upload route
+app.use('/api/upload', require('./routes/upload'));
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Define Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/contacts', require('./routes/contacts'));
@@ -68,15 +74,16 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/ai-reminders', require('./routes/aiReminders'));
- 
- // Root route for health check / status
- app.get('/', (req, res) => {
-   res.json({ 
-     status: "OK", 
-     message: "Smart Contact Management System API is running...", 
-     timestamp: new Date().toISOString() 
-   });
- });
+app.use('/api/vault', require('./routes/vault'));
+
+// Root route for health check / status
+app.get('/', (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "Smart Contact Management System API is running...", 
+    timestamp: new Date().toISOString() 
+  });
+});
 
 const onlineUsers = new Map(); // Map of userId -> Set<socketId>
 const activeCalls = new Map(); // Map<callKey, { from, to, startedAt }>
@@ -137,400 +144,98 @@ const getPrimarySocketId = (userId) => {
   return sockets.values().next().value;
 };
 
-io.use((socket, next) => {
-  const auth = socket.handshake.auth || {};
-  const token = auth.token || auth.authToken;
-  const userId = auth.userId;
-
-  if (!token || !userId) {
-    return next(new Error('Unauthorized socket connection'));
+const getOnlineSummary = () => {
+  const summary = {};
+  for (const [uid, sockets] of onlineUsers.entries()) {
+    summary[uid] = sockets.size;
   }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded.user || decoded.user.id !== userId) {
-      return next(new Error('Invalid socket user'));
-    }
-    socket.data.userId = decoded.user.id;
-    return next();
-  } catch (err) {
-    return next(new Error('Invalid socket token'));
-  }
-});
+  return summary;
+};
 
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
+  const auth = socket.handshake.auth || {};
+  const userId = auth.userId;
 
-  const userId = socket.data.userId;
   if (userId) {
     addOnlineSocket(userId, socket.id);
     socket.join(`user:${userId}`);
-    console.log(`User ${userId} is online`);
-
-    // Broadcast online users to all clients
-    io.emit('online-users', Array.from(onlineUsers.keys()));
+    console.log(`[Socket] User ${userId} connected. Online users:`, JSON.stringify(getOnlineSummary()));
   }
 
-  socket.on('join', (joinUserId) => {
-    const uid = String(joinUserId || userId || '');
-    if (!uid) return;
-    socket.join(`user:${uid}`);
-  });
-
-  // Compatibility event so clients can explicitly mark presence after auth.
-  socket.on('online', (onlineUserId) => {
-    const uid = String(onlineUserId || userId || '');
-    if (!uid) return;
-    addOnlineSocket(uid, socket.id);
-    socket.join(`user:${uid}`);
-    io.emit('online-users', Array.from(onlineUsers.keys()));
-    console.log('User joined room:', uid);
-
-    });
-
-  socket.on('join-chat', ({ contactId }) => {
-    if (!userId || !contactId) return;
-    socket.join(getChatRoom(userId, contactId));
-    socket.to(getChatRoom(userId, contactId)).emit('message-seen', { contactId });
-  });
-
-  socket.on('typing-start', ({ contactId }) => {
-    if (!userId || !contactId) return;
-    socket.to(getChatRoom(userId, contactId)).emit('typing-start', { contactId, userId });
-  });
-
-  socket.on('typing-stop', ({ contactId }) => {
-    if (!userId || !contactId) return;
-    socket.to(getChatRoom(userId, contactId)).emit('typing-stop', { contactId, userId });
+  socket.on('join', (uid) => {
+    const idToJoin = uid || userId;
+    if (idToJoin) {
+      addOnlineSocket(idToJoin, socket.id);
+      socket.join(`user:${idToJoin}`);
+      console.log(`[Socket] User ${idToJoin} joined 'user:${idToJoin}'. Online:`, JSON.stringify(getOnlineSummary()));
+    }
   });
 
   socket.on('joinRoom', (roomId) => {
-    if (!roomId) return;
-    socket.join(String(roomId));
-  });
-
-  socket.on('typing', (receiverId) => {
-    if (!userId || !receiverId) return;
-    io.to(`user:${String(receiverId)}`).emit('typing', { from: userId });
-  });
-
-  socket.on('notification', (payload) => {
-    if (!userId || !payload || typeof payload !== 'object') return;
-    const title = String(payload.title || '').trim();
-    const body = String(payload.body || '').trim();
-    if (!title && !body) return;
-
-    emitUserNotification(userId, {
-      type: 'message',
-      title: title || 'Test Notification',
-      body: body || 'Hello',
-      senderId: userId,
-    });
-  });
-
-  socket.on('stopTyping', (receiverId) => {
-    if (!userId || !receiverId) return;
-    io.to(`user:${String(receiverId)}`).emit('stopTyping', { from: userId });
-  });
-
-  socket.on('sendMessage', async (data) => {
-    try {
-      const {
-        senderId,
-        receiverId,
-        message,
-        clientMessageId,
-        expiresInMinutes = null,
-        messageType = 'text',
-        sharedContactId = null,
-        shareToken = null,
-        sharedContactName = null,
-        shareExpiresAt = null,
-        sharePayload = null,
-      } = data || {};
-      const safeText = String(message || '').trim();
-      if (!userId || !receiverId) return;
-      const temporaryMinutes = Number(expiresInMinutes);
-      const isTemporary = Number.isFinite(temporaryMinutes) && temporaryMinutes > 0;
-      const expiresAt = isTemporary ? new Date(Date.now() + Math.floor(temporaryMinutes) * 60 * 1000) : null;
-      const normalizedMessageType = messageType === 'contact_share' ? 'contact_share' : 'text';
-
-      if (normalizedMessageType === 'text' && !safeText) return;
-      if (normalizedMessageType === 'contact_share' && !(sharePayload?.token || shareToken)) return;
-
-      const effectiveSender = String(senderId || userId);
-      const chatRoomId = getPairChatRoom(effectiveSender, receiverId);
-
-      let doc = null;
-      if (clientMessageId) {
-        doc = await Message.findOne({ senderId: effectiveSender, clientMessageId }).lean();
-      }
-
-      if (!doc) {
-        const created = await Message.create({
-          ownerId: effectiveSender,
-          senderId: effectiveSender,
-          receiverId,
-          chatRoomId,
-          sender: 'user',
-          messageType: normalizedMessageType,
-          text: normalizedMessageType === 'contact_share'
-            ? (safeText || `Contact access granted${sharedContactName ? `: ${sharedContactName}` : ''}`)
-            : safeText,
-          sharedContactId,
-          shareToken: sharePayload?.token || shareToken || null,
-          sharedContactName,
-          shareExpiresAt: sharePayload?.expiresAt || shareExpiresAt || null,
-          sharePayload: normalizedMessageType === 'contact_share'
-            ? {
-              type: 'contact_share',
-              contactId: sharePayload?.contactId || sharedContactId || null,
-              token: sharePayload?.token || shareToken || null,
-              expiresAt: sharePayload?.expiresAt || shareExpiresAt || null,
-            }
-            : null,
-          status: 'delivered',
-          deliveredAt: new Date(),
-          clientMessageId: clientMessageId || null,
-          isTemporary,
-          expiresAt,
-        });
-        doc = created.toObject();
-      }
-
-      const messageData = {
-        _id: doc._id,
-        senderId: effectiveSender,
-        receiverId: String(receiverId),
-        chatRoomId,
-        messageType: doc.messageType || 'text',
-        text: doc.text,
-        sharedContactId: doc.sharedContactId || null,
-        shareToken: doc.shareToken || null,
-        sharedContactName: doc.sharedContactName || null,
-        shareExpiresAt: doc.shareExpiresAt || null,
-        sharePayload: doc.sharePayload || null,
-        status: doc.status || 'delivered',
-        deliveredAt: doc.deliveredAt || new Date().toISOString(),
-        seenAt: doc.seenAt || null,
-        createdAt: doc.createdAt || new Date().toISOString(),
-        clientMessageId: doc.clientMessageId || clientMessageId || null,
-        isTemporary: Boolean(doc.isTemporary),
-        expiresAt: doc.expiresAt || null,
-      };
-
-      io.to(`user:${String(receiverId)}`).emit('newMessage', messageData);
-      io.to(`user:${effectiveSender}`).emit('newMessage', messageData);
-      io.to(`user:${String(receiverId)}`).emit('receiveMessage', messageData);
-      io.to(`user:${effectiveSender}`).emit('receiveMessage', messageData);
-      io.to(`user:${effectiveSender}`).emit('message-delivered', {
-        messageId: doc._id,
-        receiverId: String(receiverId),
-        contactId: String(receiverId),
-      });
-
-      emitUserNotification(receiverId, {
-        type: 'message',
-        title: 'New Message',
-        body: normalizedMessageType === 'contact_share'
-          ? `Contact access shared${sharedContactName ? `: ${sharedContactName}` : ''}`
-          : safeText,
-        senderId: effectiveSender,
-      });
-    } catch (err) {
-      console.error('sendMessage error:', err.message);
+    if (roomId) {
+      socket.join(String(roomId));
+      console.log(`[Socket] Socket ${socket.id} joined room ${roomId}`);
     }
   });
 
-  socket.on('send-message', async (data) => {
-    try {
-      const {
-        contactId,
-        text,
-        clientMessageId,
-        expiresInMinutes = null,
-        messageType = 'text',
-        sharedContactId = null,
-        shareToken = null,
-        shareLink = null,
-        sharedContactName = null,
-        shareExpiresAt = null,
-        sharePayload = null,
-      } = data || {};
-      if (!userId || !contactId) return;
-      const temporaryMinutes = Number(expiresInMinutes);
-      const isTemporary = Number.isFinite(temporaryMinutes) && temporaryMinutes > 0;
-      const expiresAt = isTemporary ? new Date(Date.now() + Math.floor(temporaryMinutes) * 60 * 1000) : null;
-
-      const normalizedMessageType = messageType === 'contact_share' ? 'contact_share' : 'text';
-      const safeText = (text || '').trim();
-      if (normalizedMessageType === 'text' && !safeText) return;
-      if (normalizedMessageType === 'contact_share' && !shareToken) return;
-
-      const contact = await Contact.findById(contactId).lean();
-      if (!contact || contact.userId.toString() !== userId) return;
-
-      let message = null;
-      if (clientMessageId) {
-        message = await Message.findOne({ ownerId: userId, clientMessageId });
-      }
-
-      if (!message) {
-        const payloadText = normalizedMessageType === 'contact_share'
-          ? (safeText || `Shared contact: ${sharedContactName || 'Contact'}`)
-          : safeText;
-
-        message = await Message.create({
-          ownerId: userId,
-          contactId,
-          sender: 'user',
-          messageType: normalizedMessageType,
-          text: payloadText,
-          sharedContactId,
-          shareToken,
-          shareLink,
-          sharedContactName,
-          shareExpiresAt,
-          sharePayload: normalizedMessageType === 'contact_share'
-            ? {
-              type: 'contact_share',
-              contactId: sharePayload?.contactId || sharedContactId || null,
-              token: sharePayload?.token || shareToken || null,
-              expiresAt: sharePayload?.expiresAt || shareExpiresAt || null,
-            }
-            : null,
-          status: 'delivered',
-          deliveredAt: new Date(),
-          clientMessageId: clientMessageId || null,
-          isTemporary,
-          expiresAt,
-        });
-      }
-
-      const payload = {
-        _id: message._id,
-        ownerId: message.ownerId,
-        contactId: message.contactId,
-        sender: message.sender,
-        messageType: message.messageType,
-        text: message.text,
-        sharedContactId: message.sharedContactId,
-        shareToken: message.shareToken,
-        shareLink: message.shareLink,
-        sharedContactName: message.sharedContactName,
-        shareExpiresAt: message.shareExpiresAt,
-        sharePayload: message.sharePayload || null,
-        status: message.status,
-        deliveredAt: message.deliveredAt,
-        seenAt: message.seenAt,
-        createdAt: message.createdAt,
-        clientMessageId: message.clientMessageId,
-        isTemporary: Boolean(message.isTemporary),
-        expiresAt: message.expiresAt || null,
-      };
-
-      
-        const receivingUserId = contact.linkedUserId ? String(contact.linkedUserId) : null;
-        
-        io.to(getChatRoom(userId, contactId)).emit('new-message', payload);
-        io.to(getChatRoom(userId, contactId)).emit('receiveMessage', payload);
-        
-        // Broadcast the message directly to the remote user's socket room if they are online
-        if (receivingUserId) {
-            io.to(`user:${receivingUserId}`).emit('receiveMessage', payload);
-            io.to(`user:${receivingUserId}`).emit('newMessage', payload);
-            io.to(`user:${receivingUserId}`).emit('new-message', payload);
-            
-            // Generate notification for the receiving user, NOT the sender
-            emitUserNotification(receivingUserId, {
-                type: 'message',
-                title: 'New Message',
-                body: normalizedMessageType === 'contact_share'
-                    ? (safeText || `Shared contact: ${sharedContactName || 'Contact'}`)
-                    : safeText,
-                senderId: userId,
-                contactId: String(contact._id),
-            });
+  // Helper to resolve contactId to linkedUserId
+  const resolveTargetId = async (id) => {
+    if (!id) return null;
+    if (isObjectIdLike(id)) {
+      try {
+        const contact = await Contact.findById(id).select('linkedUserId').lean();
+        if (contact && contact.linkedUserId) {
+          return String(contact.linkedUserId);
         }
-        
-        io.to(getChatRoom(userId, contactId)).emit('message-delivered', {
-          messageId: message._id,
-          contactId,
-        });
-
-        await trackInteraction({
-        userId,
-        contactId,
-        type: 'message_sent',
-        metadata: { messageId: message._id.toString() },
-      });
-    } catch (err) {
-      console.error('send-message error:', err.message);
+      } catch (err) {}
     }
-  });
+    return String(id);
+  };
 
-  // Handle call initiation
-  socket.on('call-user', (data) => {
-    const { to, from, fromName, type, offer } = data || {};
-    const targetUserId = String(to || '');
+  // --- CALL HANDLERS (Standardized) ---
+
+  socket.on('callKey', async (data) => {
+    const { to, from, key } = data || {};
+    const senderId = String(from || userId || '');
+    const targetUserId = await resolveTargetId(to);
+    
+    console.log(`[Socket Debug] callKey from ${senderId} to ${to} (target: ${targetUserId})`);
+    console.log(`[Socket Debug] Target ${targetUserId} exists in onlineUsers:`, onlineUsers.has(targetUserId));
+
+    if (!targetUserId || !key) return;
+
+    io.to(`user:${targetUserId}`).emit('callKey', { from: senderId, key });
+  });
+  
+  // Handler for call initiation (Handles both legacy 'callUser' and new 'call-user')
+  const handleCallUser = async (data) => {
+    const { to, from, fromName, type, offer, signal } = data || {};
     const senderUserId = String(from || userId || '');
-    if (!targetUserId || !senderUserId || !offer) return;
-    if (targetUserId === senderUserId) return; // Prevent self-call
+    const targetUserId = await resolveTargetId(to);
+
+    console.log(`[Socket Debug] call-user from ${senderUserId} to ${to} (target: ${targetUserId})`);
+    console.log(`[Socket Debug] Sender online: ${onlineUsers.has(senderUserId)}, Target online: ${onlineUsers.has(targetUserId)}`);
+
+    const finalOffer = offer || signal;
+    if (!targetUserId || !senderUserId || !finalOffer) {
+      console.warn('[Socket Debug] Missing data for call-user', { targetUserId, senderUserId, hasOffer: !!finalOffer });
+      return;
+    }
+    if (targetUserId === senderUserId) {
+      console.warn('[Socket Debug] User attempting to call themselves');
+      return;
+    }
 
     activeCalls.set(buildCallKey(senderUserId, targetUserId), { from: senderUserId, to: targetUserId, startedAt: Date.now() });
 
     if (onlineUsers.has(targetUserId)) {
+      console.log(`[Socket Debug] Emitting incomingCall to user:${targetUserId}`);
       io.to(`user:${targetUserId}`).emit('incomingCall', {
         from: senderUserId,
         fromName,
         type,
-        offer,
-      });
-      emitUserNotification(to, {
-        type: 'call',
-        title: 'Incoming Call',
-        body: `${fromName || 'Someone'} is calling you`,
-        senderId: senderUserId,
-      });
-      console.log('Caller:', senderUserId);
-      console.log('Receiver:', targetUserId);
-      trackInteraction({
-        userId: senderUserId,
-        contactId: targetUserId,
-        type: 'call_outgoing',
-        metadata: { status: 'ringing' },
-      });
-    } else {
-      socket.emit('user-offline', { userId: targetUserId });
-      trackInteraction({
-        userId: senderUserId,
-        contactId: targetUserId,
-        type: 'call_missed',
-        notes: 'Recipient offline',
-      });
-    }
-  });
-
-  socket.on('callUser', (data) => {
-    const { to, from, fromName, type, offer } = data || {};
-    const targetUserId = String(to || '');
-    const senderUserId = String(from || userId || '');
-    if (!targetUserId || !senderUserId || !offer) return;
-
-    activeCalls.set(buildCallKey(senderUserId, targetUserId), { from: senderUserId, to: targetUserId, startedAt: Date.now() });
-
-    if (onlineUsers.has(targetUserId)) {
-      io.to(`user:${targetUserId}`).emit('incomingCall', {
-        from: senderUserId,
-        fromName,
-        type,
-        offer,
-      });
-      io.to(`user:${targetUserId}`).emit('incoming-call', {
-        from: senderUserId,
-        fromName,
-        type,
-        offer,
+        offer: finalOffer,
+        signal: finalOffer // legacy support
       });
       emitUserNotification(targetUserId, {
         type: 'call',
@@ -538,57 +243,49 @@ io.on('connection', (socket) => {
         body: `${fromName || 'Someone'} is calling you`,
         senderId: senderUserId,
       });
-    } else {
-      socket.emit('user-offline', { userId: targetUserId });
-    }
-  });
-
-  // Handle call acceptance
-  socket.on('accept-call', (data) => {
-    const { to, answer } = data;
-    const targetUserId = String(to || '');
-    if (targetUserId && answer) {
-      io.to(`user:${targetUserId}`).emit('call-accepted', { answer });
-      io.to(`user:${targetUserId}`).emit('callAnswered', { answer });
-      io.to(`user:${targetUserId}`).emit('callAccepted', { answer });
-      console.log(`Call accepted by recipient`);
-
       trackInteraction({
-        userId,
-        contactId: targetUserId,
-        type: 'call_incoming',
-        metadata: { status: 'accepted' },
+        userId: senderUserId,
+        contactId: to,
+        type: 'call_outgoing',
+        metadata: { status: 'ringing' },
+      });
+    } else {
+      console.log(`[Socket Debug] Target user ${targetUserId} is offline`);
+      socket.emit('user-offline', { userId: targetUserId });
+      trackInteraction({
+        userId: senderUserId,
+        contactId: to,
+        type: 'call_missed',
+        notes: 'Recipient offline',
       });
     }
-  });
+  };
 
-  socket.on('answerCall', (data) => {
-    const { to, answer } = data || {};
-    const targetUserId = String(to || '');
-    if (!targetUserId || !answer) return;
-    io.to(`user:${targetUserId}`).emit('callAnswered', { answer });
-    io.to(`user:${targetUserId}`).emit('call-accepted', { answer });
-    io.to(`user:${targetUserId}`).emit('callAccepted', { answer });
-  });
+  socket.on('call-user', handleCallUser);
+  socket.on('callUser', handleCallUser);
 
-  socket.on('acceptCall', (data) => {
-    const { to, signal, answer } = data || {};
-    const targetUserId = String(to || '');
-    const resolvedAnswer = answer || signal;
-    if (!targetUserId || !resolvedAnswer) return;
-    io.to(`user:${targetUserId}`).emit('callAnswered', { answer: resolvedAnswer });
-    io.to(`user:${targetUserId}`).emit('call-accepted', { answer: resolvedAnswer });
-    io.to(`user:${targetUserId}`).emit('callAccepted', { answer: resolvedAnswer });
-  });
+  const handleAcceptCall = async (data) => {
+    const { to, answer, signal } = data || {};
+    const targetUserId = await resolveTargetId(to);
+    const finalAnswer = answer || signal;
+    if (!targetUserId || !finalAnswer) return;
+    
+    console.log(`[Socket Debug] Accept-call from ${userId} to ${targetUserId}`);
+    io.to(`user:${targetUserId}`).emit('call-accepted', { answer: finalAnswer, signal: finalAnswer });
+    io.to(`user:${targetUserId}`).emit('callAccepted', { answer: finalAnswer, signal: finalAnswer }); // Home.tsx support
+    io.to(`user:${targetUserId}`).emit('callAnswered', { answer: finalAnswer, signal: finalAnswer }); // Home.tsx variant
+  };
 
-  // Handle call rejection
-  socket.on('reject-call', (data) => {
-    const { to } = data;
-    const targetUserId = String(to || '');
+  socket.on('accept-call', handleAcceptCall);
+  socket.on('acceptCall', handleAcceptCall);
+  socket.on('answerCall', handleAcceptCall);
+
+  socket.on('reject-call', async (data) => {
+    const { to } = data || {};
+    const targetUserId = await resolveTargetId(to);
     if (targetUserId) {
       io.to(`user:${targetUserId}`).emit('call-rejected');
-      console.log(`Call rejected by recipient`);
-
+      io.to(`user:${targetUserId}`).emit('callRejected'); // Home.tsx
       trackInteraction({
         userId: targetUserId,
         contactId: userId,
@@ -598,51 +295,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle ICE candidates
-  socket.on('ice-candidate', (data) => {
-    const { to, candidate } = data;
-    const targetUserId = String(to || '');
-    if (!targetUserId || !candidate) return;
-    io.to(`user:${targetUserId}`).emit('ice-candidate', { candidate });
-    io.to(`user:${targetUserId}`).emit('iceCandidate', { candidate });
-  });
-
-  socket.on('iceCandidate', (data) => {
+  const handleIceCandidate = async (data) => {
     const { to, candidate } = data || {};
-    const targetUserId = String(to || '');
-    if (!targetUserId || !candidate) return;
-    io.to(`user:${targetUserId}`).emit('iceCandidate', { candidate });
-    io.to(`user:${targetUserId}`).emit('ice-candidate', { candidate });
-  });
-
-  // Handle call end
-  socket.on('end-call', (data) => {
-    const { to } = data;
-    const targetUserId = String(to || '');
-    if (targetUserId) {
-      io.to(`user:${targetUserId}`).emit('call-ended');
-      io.to(`user:${targetUserId}`).emit('callEnded');
-      console.log(`Call ended`);
+    const targetUserId = await resolveTargetId(to);
+    if (targetUserId && candidate) {
+      io.to(`user:${targetUserId}`).emit('ice-candidate', { from: userId, candidate });
+      io.to(`user:${targetUserId}`).emit('iceCandidate', { from: userId, candidate }); // Home.tsx
     }
+  };
 
-    const key = buildCallKey(userId, targetUserId);
-    const call = activeCalls.get(key);
-    if (call) {
-      const durationSeconds = Math.max(0, Math.floor((Date.now() - call.startedAt) / 1000));
-      activeCalls.delete(key);
-      if (targetUserId) {
-        trackInteraction({ userId, contactId: targetUserId, type: 'call_outgoing', duration: durationSeconds });
-        trackInteraction({ userId: targetUserId, contactId: userId, type: 'call_incoming', duration: durationSeconds });
-      }
-    }
-  });
+  socket.on('ice-candidate', handleIceCandidate);
+  socket.on('iceCandidate', handleIceCandidate);
 
-  socket.on('endCall', (data) => {
+  const handleEndCall = async (data) => {
     const { to } = data || {};
-    const targetUserId = String(to || '');
+    const targetUserId = await resolveTargetId(to);
     if (targetUserId) {
-      io.to(`user:${targetUserId}`).emit('callEnded');
       io.to(`user:${targetUserId}`).emit('call-ended');
+      io.to(`user:${targetUserId}`).emit('callEnded'); // Legacy support
     }
 
     const key = buildCallKey(userId, targetUserId);
@@ -651,9 +321,130 @@ io.on('connection', (socket) => {
       const durationSeconds = Math.max(0, Math.floor((Date.now() - call.startedAt) / 1000));
       activeCalls.delete(key);
       if (targetUserId) {
-        trackInteraction({ userId, contactId: targetUserId, type: 'call_outgoing', duration: durationSeconds });
-        trackInteraction({ userId: targetUserId, contactId: userId, type: 'call_incoming', duration: durationSeconds });
+        trackInteraction({ userId, contactId: to, type: 'call_outgoing', duration: durationSeconds });
       }
+    }
+  };
+
+  socket.on('end-call', handleEndCall);
+  socket.on('endCall', handleEndCall);
+
+  // --- MESSAGING HANDLERS ---
+
+  socket.on('sendMessage', async (data) => {
+    try {
+      const {
+        senderId,
+        receiverId,
+        text,
+        message, // fallback
+        clientMessageId,
+        isTemporary,
+        expiresAt,
+        messageType = 'text',
+        sharedContactId,
+        shareToken,
+        sharedContactName,
+        shareExpiresAt,
+        sharePayload,
+      } = data || {};
+
+      const effectiveSender = String(senderId || userId);
+      const targetUserId = await resolveTargetId(receiverId || data.to);
+      const content = String(text || message || '').trim();
+
+      if (!effectiveSender || !targetUserId) return;
+      if (messageType === 'text' && !content) return;
+
+      // Always ensure shareExpiresAt and sharePayload.expiresAt for contact_share
+      let finalShareExpiresAt = shareExpiresAt;
+      let finalSharePayload = sharePayload;
+      let createdAt = new Date().toISOString();
+      if (messageType === 'contact_share') {
+        // Fallback: if missing, set to createdAt + 5min
+        if (!finalShareExpiresAt || isNaN(new Date(finalShareExpiresAt).getTime())) {
+          finalShareExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        }
+        if (!finalSharePayload || typeof finalSharePayload !== 'object') {
+          finalSharePayload = {};
+        }
+        if (!finalSharePayload.expiresAt || isNaN(new Date(finalSharePayload.expiresAt).getTime())) {
+          finalSharePayload.expiresAt = finalShareExpiresAt;
+        }
+      }
+      const messageData = {
+        _id: `tmp-${Date.now()}`,
+        senderId: effectiveSender,
+        receiverId: targetUserId,
+        text: content,
+        messageType,
+        status: 'delivered',
+        deliveredAt: new Date().toISOString(),
+        createdAt,
+        clientMessageId: clientMessageId || null,
+        isTemporary: Boolean(isTemporary),
+        expiresAt: expiresAt || null,
+        sharedContactId,
+        shareToken,
+        sharedContactName,
+        shareExpiresAt: finalShareExpiresAt,
+        sharePayload: finalSharePayload,
+      };
+
+      // Broadcast to both raw and resolved rooms for safety
+      io.to(`user:${targetUserId}`).emit('receiveMessage', messageData);
+      if (receiverId && receiverId !== targetUserId) {
+        io.to(`user:${receiverId}`).emit('receiveMessage', messageData);
+      }
+      
+      // Echo back to sender
+      socket.emit('receiveMessage', messageData);
+
+      // Persistence in background
+      Message.create({
+        ownerId: effectiveSender,
+        senderId: effectiveSender,
+        receiverId: receiverId || targetUserId,
+        text: content,
+        messageType,
+        clientMessageId,
+        isTemporary,
+        expiresAt,
+        sharedContactId,
+        shareToken,
+        sharedContactName,
+        shareExpiresAt,
+        sharePayload,
+        status: 'delivered',
+        deliveredAt: new Date(),
+      }).catch(err => console.error('[Socket] Message Save error:', err.message));
+
+      // Track interaction
+      trackInteraction({
+        userId: effectiveSender,
+        contactId: receiverId || targetUserId,
+        type: 'message_sent',
+        metadata: { clientMessageId }
+      }).catch(() => {});
+
+    } catch (err) {
+      console.error('[Socket] sendMessage Error:', err.message);
+    }
+  });
+
+  socket.on('typing', async (data) => {
+    const receiverId = typeof data === 'string' ? data : data.to;
+    const targetId = await resolveTargetId(receiverId);
+    if (targetId) {
+      io.to(`user:${targetId}`).emit('typing', { from: userId });
+    }
+  });
+
+  socket.on('stopTyping', async (data) => {
+    const receiverId = typeof data === 'string' ? data : data.to;
+    const targetId = await resolveTargetId(receiverId);
+    if (targetId) {
+      io.to(`user:${targetId}`).emit('stopTyping', { from: userId });
     }
   });
 
@@ -671,19 +462,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  socket.on('notification', (payload) => {
+    if (!userId || !payload || typeof payload !== 'object') return;
+    const title = String(payload.title || '').trim();
+    const body = String(payload.body || '').trim();
+    if (!title && !body) return;
 
+    emitUserNotification(userId, {
+      type: 'message',
+      title: title || 'Test Notification',
+      body: body || 'Hello',
+      senderId: userId,
+    });
+  });
+
+  socket.on('disconnect', () => {
     if (userId) {
       removeOnlineSocket(userId, socket.id);
-      if (!onlineUsers.has(userId)) {
-        console.log(`User ${userId} is offline`);
-      }
+      console.log(`[Socket] User ${userId} disconnected`);
     }
-
-    // Broadcast updated online users
-    io.emit('online-users', Array.from(onlineUsers.keys()));
   });
 });
 
@@ -702,25 +499,25 @@ const generateAIInsightReminders = async () => {
   const dayStamp = now.toISOString().slice(0, 10);
 
   const contacts = await Contact.find({}).select('_id userId name').lean();
-  const contactsByUser = new Map();
+    const filteredContactsByUser = new Map();
+    for (const contact of contacts) {
+      if (!contact.userId || !isObjectIdLike(contact.userId)) continue;
+      const key = String(contact.userId);
+      if (!filteredContactsByUser.has(key)) filteredContactsByUser.set(key, []);
+      filteredContactsByUser.get(key).push(contact);
+    }
 
-  for (const contact of contacts) {
-    const key = String(contact.userId);
-    if (!contactsByUser.has(key)) contactsByUser.set(key, []);
-    contactsByUser.get(key).push(contact);
-  }
+    for (const [uid, userContacts] of filteredContactsByUser.entries()) {
+      const contactIds = userContacts.map((c) => c._id);
+      if (!contactIds.length) continue;
 
-  for (const [uid, userContacts] of contactsByUser.entries()) {
-    const contactIds = userContacts.map((c) => c._id);
-    if (!contactIds.length) continue;
-
-    const grouped = await Interaction.aggregate([
-      {
-        $match: {
-          userId: new mongoose.Types.ObjectId(uid),
-          contactId: { $in: contactIds },
+      const grouped = await Interaction.aggregate([
+        {
+          $match: {
+            userId: new mongoose.Types.ObjectId(uid),
+            contactId: { $in: contactIds },
+          },
         },
-      },
       {
         $group: {
           _id: '$contactId',

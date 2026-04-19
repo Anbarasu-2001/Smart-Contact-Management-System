@@ -18,11 +18,19 @@ exports.getMessages = async (req, res) => {
 
 exports.sendMessage = async (req, res) => {
   try {
-    const { contactId, text } = req.body;
+    const { contactId, text, messageType, fileUrl, fileName, fileSize, imageUrl, videoUrl, audioUrl, thumbnailUrl } = req.body;
     const message = new Message({
       senderId: req.user.id,
       receiverId: contactId,
-      text
+      text,
+      messageType: messageType || 'text',
+      fileUrl,
+      fileName,
+      fileSize,
+      imageUrl,
+      videoUrl,
+      audioUrl,
+      thumbnailUrl,
     });
     await message.save();
     res.json(message);

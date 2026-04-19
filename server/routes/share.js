@@ -41,11 +41,15 @@ const emitShareUpdated = (req, share, statusOverride = null) => {
 const createShare = async (req, res, contactIdFromPath = null) => {
     const contactId = req.body.contactId || contactIdFromPath;
     const receiverId = req.body.receiverId;
-    const expiresInMinutes = toPositiveMinutes(req.body.expiresInMinutes);
+    let expiresInMinutes = toPositiveMinutes(req.body.expiresInMinutes);
     const isOneTime = Boolean(req.body.isOneTime);
 
-    if (!contactId || !receiverId || !expiresInMinutes) {
-        return res.status(400).json({ msg: 'contactId, receiverId and expiresInMinutes are required' });
+    // Always default to 5 minutes if missing or invalid
+    if (!expiresInMinutes) {
+        expiresInMinutes = 5;
+    }
+    if (!contactId || !receiverId) {
+        return res.status(400).json({ msg: 'contactId and receiverId are required' });
     }
 
     try {
@@ -54,7 +58,7 @@ const createShare = async (req, res, contactIdFromPath = null) => {
             return res.status(404).json({ msg: 'Contact not found' });
         }
 
-        if (contact.userId.toString() !== req.user.id) {
+        if (String(contact.ownerId || "") !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
@@ -68,6 +72,7 @@ const createShare = async (req, res, contactIdFromPath = null) => {
         const share = await ShareLink.create({
             senderId: req.user.id,
             contactId,
+            contactName: contact.name || 'Shared Contact',
             receiverId,
             token,
             expiresAt,
@@ -76,12 +81,15 @@ const createShare = async (req, res, contactIdFromPath = null) => {
             isActive: true,
         });
 
+        emitShareUpdated(req, share);
+
         res.status(201).json({
             token: share.token,
             expiresAt: share.expiresAt,
             isActive: share.isActive,
             receiverId: share.receiverId,
             accessType: share.accessType,
+            serverTime: new Date()
         });
     } catch (err) {
         console.error(err.message);
@@ -101,22 +109,32 @@ router.post('/create', auth, async (req, res) => {
 
     try {
         const token = crypto.randomBytes(24).toString('hex');
-        
+
         let expireMins = 60;
         if (expiresInMinutes && !isNaN(expiresInMinutes)) {
-            expireMins = parseInt(expiresInMinutes);
+            expireMins = Math.max(1, parseInt(expiresInMinutes));
         }
+
+        const contact = await Contact.findById(contactId);
+        const contactName = contact ? contact.name : 'Unknown Contact';
+
+        const expiresAt = new Date(Date.now() + expireMins * 60 * 1000);
+        // Debug log for expiry
+        console.log(`[DEBUG] Creating share: now=${new Date().toISOString()} expireMins=${expireMins} expiresAt=${expiresAt.toISOString()}`);
 
         const share = await ShareLink.create({
             senderId: req.user.id,
             contactId,
+            contactName,
             receiverId,
             token,
-            expiresAt: new Date(Date.now() + expireMins * 60 * 1000),
+            expiresAt,
             isOneTime: Boolean(isOneTime),
             isActive: true,
             accessType: 'limited'
         });
+
+        emitShareUpdated(req, share);
 
         res.json({
             link: `http://localhost:3000/share/${share.token}`,
@@ -124,7 +142,8 @@ router.post('/create', auth, async (req, res) => {
             expiresAt: share.expiresAt,
             isActive: share.isActive,
             receiverId: share.receiverId,
-            accessType: share.accessType
+            accessType: share.accessType,
+            serverTime: new Date()
         });
     } catch (err) {
         console.error(err.message);
@@ -140,11 +159,41 @@ router.post('/:contactId', auth, async (req, res) => createShare(req, res, req.p
 // @access  Private
 router.get('/mine', auth, async (req, res) => {
     try {
-        const links = await ShareLink.find({ senderId: req.user.id })
+        let links = await ShareLink.find({
+            $or: [
+                { senderId: req.user.id },
+                { receiverId: req.user.id }
+            ]
+        })
             .sort({ createdAt: -1 })
             .populate('contactId', 'name phone email')
             .populate('receiverId', 'name email')
-            .lean();
+            .exec();
+
+        // Mark expired links as inactive if needed
+        const now = new Date();
+        let changed = false;
+        for (const share of links) {
+            if (share.isActive && share.expiresAt && share.expiresAt <= now) {
+                share.isActive = false;
+                await share.save();
+                changed = true;
+            }
+        }
+
+        // Re-fetch if any were changed
+        if (changed) {
+            links = await ShareLink.find({
+                $or: [
+                    { senderId: req.user.id },
+                    { receiverId: req.user.id }
+                ]
+            })
+                .sort({ createdAt: -1 })
+                .populate('contactId', 'name phone email')
+                .populate('receiverId', 'name email')
+                .exec();
+        }
 
         const response = links.map((share) => {
             const status = getShareStatus(share);
@@ -153,10 +202,10 @@ router.get('/mine', auth, async (req, res) => {
                 token: share.token,
                 shareLink: `/share/${share.token}`,
                 senderId: share.senderId,
-                receiverId: share.receiverId?._id || share.receiverId,
+                receiverId: share.receiverId?._id || share.receiverId || null,
                 receiverName: share.receiverId?.name || share.receiverId?.email || 'Unknown User',
-                contactId: share.contactId?._id || share.contactId,
-                contactName: share.contactId?.name || 'Unknown Contact',
+                contactId: share.contactId?._id || share.contactId || null,
+                contactName: share.contactName || share.contactId?.name || 'Unknown Contact',
                 createdAt: share.createdAt,
                 expiresAt: share.expiresAt,
                 isActive: share.isActive,
@@ -168,7 +217,10 @@ router.get('/mine', auth, async (req, res) => {
             };
         });
 
-        res.json(response);
+        res.json({
+            links: response,
+            serverTime: new Date()
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -191,28 +243,30 @@ router.get('/:token', auth, async (req, res) => {
         }
 
         const now = new Date();
-        if (!share.isActive || share.expiresAt <= now) {
-            if (share.isActive && share.expiresAt <= now) {
+        if (!share.isActive || (share.expiresAt && share.expiresAt <= now)) {
+            if (share.isActive && share.expiresAt && share.expiresAt <= now) {
                 share.isActive = false;
                 await share.save();
             }
-            return res.status(410).json({ msg: 'Link expired' });
+            return res.status(410).json({ msg: 'Link expired', expiresAt: share.expiresAt || null });
         }
 
         const contact = await Contact.findById(share.contactId).select('name');
 
         if (!contact) {
-            return res.status(404).json({ msg: 'Contact not found' });
+            return res.status(404).json({ msg: 'Contact not found', expiresAt: share.expiresAt || null });
         }
 
+        // Always include expiresAt, even if null
         res.json({
             contactId: String(share.contactId),
             name: contact.name,
-            expiresAt: share.expiresAt,
+            expiresAt: share.expiresAt || null,
             isOneTime: share.isOneTime,
             isActive: share.isActive,
             accessType: share.accessType || 'limited',
             status: getShareStatus(share),
+            serverTime: new Date()
         });
 
     } catch (err) {
@@ -224,6 +278,8 @@ router.get('/:token', auth, async (req, res) => {
 // @route   POST api/share/:token/access
 // @desc    Validate token and consume action-based access
 // @access  Private (receiver only)
+
+// PATCH: Allow chat/call via share link by auto-creating a temporary Contact for the receiver if not present
 router.post('/:token/access', auth, async (req, res) => {
     try {
         const action = String(req.body?.action || '').toLowerCase();
@@ -249,9 +305,36 @@ router.post('/:token/access', auth, async (req, res) => {
             return res.status(410).json({ msg: 'Link expired' });
         }
 
-        const contact = await Contact.findById(share.contactId).select('name');
+        let contact = await Contact.findById(share.contactId).select('name linkedUserId ownerId userId phone email');
         if (!contact) {
             return res.status(404).json({ msg: 'Contact not found' });
+        }
+
+        // Check if receiver already has a Contact for this specific original contact from this sender
+        let tempContact = await Contact.findOne({
+            ownerId: share.receiverId,
+            linkedUserId: share.senderId,
+            originalContactId: share.contactId
+        });
+        if (!tempContact) {
+            // Create a temporary Contact for the receiver with TTL expiry
+            tempContact = await Contact.create({
+                ownerId: share.receiverId,
+                linkedUserId: share.senderId,
+                originalContactId: share.contactId,
+                name: contact.name || 'Shared Contact',
+                phone: contact.phone || '',
+                email: contact.email || '',
+                purpose: 'Shared',
+                priority: 'Normal',
+                expiresAt: share.expiresAt
+            });
+        } else if (tempContact.purpose === 'Shared') {
+            // If the contact already exists but is marked as Shared, ensure it stays active up to newest limit
+            if (!tempContact.expiresAt || tempContact.expiresAt < share.expiresAt) {
+                tempContact.expiresAt = share.expiresAt;
+                await tempContact.save();
+            }
         }
 
         share.accessCount += 1;
@@ -261,18 +344,38 @@ router.post('/:token/access', auth, async (req, res) => {
         if (share.isOneTime) {
             share.isActive = false;
             share.usedAt = now;
+            
+            // Sync expiration to the specific temporary contact
+            if (share.receiverId && share.senderId) {
+                await Contact.updateMany(
+                    { 
+                        ownerId: share.receiverId, 
+                        linkedUserId: share.senderId, 
+                        originalContactId: share.contactId,
+                        purpose: 'Shared' 
+                    },
+                    { $set: { expiresAt: now } }
+                );
+            }
         }
         await share.save();
 
         res.json({
             action,
-            contactId: String(share.contactId),
+            contactId: String(tempContact._id),
+            linkedUserId: String(share.senderId), // The real user to call via WebRTC
             name: contact.name,
             expiresAt: share.expiresAt,
             isOneTime: share.isOneTime,
             isActive: share.isActive,
             accessType: share.accessType || 'limited',
             status: getShareStatus(share),
+            contact: {
+                _id: String(tempContact._id),
+                name: contact.name,
+                linkedUserId: String(share.senderId),
+                userId: String(share.senderId),
+            },
         });
     } catch (err) {
         console.error(err.message);
@@ -344,6 +447,19 @@ router.patch('/:token/extend', auth, async (req, res) => {
         share.expiresAt = new Date(base.getTime() + minutes * 60 * 1000);
         await share.save();
 
+        // Safely bump the TTL expiration of generated temporary contacts
+        if (share.receiverId && share.senderId) {
+            await Contact.updateMany(
+                { 
+                    ownerId: share.receiverId, 
+                    linkedUserId: share.senderId, 
+                    originalContactId: share.contactId,
+                    purpose: 'Shared' 
+                },
+                { $set: { expiresAt: share.expiresAt } }
+            );
+        }
+
         emitShareUpdated(req, share);
 
         res.json({
@@ -371,12 +487,25 @@ router.delete('/:token', auth, async (req, res) => {
         }
 
         const contact = await Contact.findById(share.contactId);
-        if (!contact || contact.userId.toString() !== req.user.id) {
+        if (!contact || String(contact.ownerId || "") !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
         share.isActive = false;
         await share.save();
+
+        // Expire any existing temporary contacts associated with this specific share
+        if (share.receiverId && share.senderId) {
+            await Contact.updateMany(
+                { 
+                    ownerId: share.receiverId, 
+                    linkedUserId: share.senderId, 
+                    originalContactId: share.contactId,
+                    purpose: 'Shared' 
+                },
+                { $set: { expiresAt: new Date() } }
+            );
+        }
 
         emitShareUpdated(req, share, 'expired');
 

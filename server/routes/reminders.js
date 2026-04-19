@@ -42,7 +42,7 @@ router.patch('/:id/toggle', auth, async (req, res) => {
     try {
         const reminder = await Reminder.findById(req.params.id);
 
-        if (!reminder || reminder.userId.toString() !== req.user.id) {
+        if (!reminder || String(reminder.userId || "") !== req.user.id) {
             return res.status(404).json({ msg: 'Reminder not found' });
         }
 
@@ -60,7 +60,7 @@ router.delete('/:id', auth, async (req, res) => {
     try {
         const reminder = await Reminder.findById(req.params.id);
 
-        if (!reminder || reminder.userId.toString() !== req.user.id) {
+        if (!reminder || String(reminder.userId || "") !== req.user.id) {
             return res.status(404).json({ msg: 'Reminder not found' });
         }
 

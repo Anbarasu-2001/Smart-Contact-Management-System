@@ -82,6 +82,15 @@ const ContactSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    expiresAt: {
+        type: Date,
+        default: null
+    },
+    originalContactId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Contact',
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -92,9 +101,10 @@ const ContactSchema = new mongoose.Schema({
     }
 });
 
-ContactSchema.index({ ownerId: 1, phone: 1 }, { unique: true });
+ContactSchema.index({ ownerId: 1, phone: 1, originalContactId: 1 }, { unique: true });
 ContactSchema.index({ userId: 1 });
 ContactSchema.index({ linkedUserId: 1 });
+ContactSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Update timestamp on save
 // Update timestamp on save

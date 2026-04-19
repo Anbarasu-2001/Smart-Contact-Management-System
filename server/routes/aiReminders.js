@@ -21,7 +21,7 @@ router.patch('/:id/read', auth, async (req, res) => {
     try {
         const reminder = await AIReminder.findById(req.params.id);
 
-        if (!reminder || reminder.userId.toString() !== req.user.id) {
+        if (!reminder || String(reminder.userId || "") !== req.user.id) {
             return res.status(404).json({ msg: 'AI reminder not found' });
         }
 

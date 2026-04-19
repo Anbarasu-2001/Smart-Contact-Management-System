@@ -1,0 +1,1 @@
+const fs=require('fs'); let txt=fs.readFileSync('frontend/tailwind.config.js', 'utf8'); txt = txt.replace('extend: {},', 'extend: { fontFamily: { sans: [\\\" "Poppins\\\, \\\sans-serif\\\] } },'); fs.writeFileSync('frontend/tailwind.config.js', txt); 

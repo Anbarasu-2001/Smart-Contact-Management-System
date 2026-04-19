@@ -1,5 +1,5 @@
-import React from 'react';
-import clsx from 'clsx';
+import React from "react";
+import clsx from "clsx";
 
 interface SectionProps {
   title: string;
@@ -9,13 +9,21 @@ interface SectionProps {
   headerRight?: React.ReactNode;
 }
 
-export default function Section({ title, subtitle, className, children, headerRight }: SectionProps) {
+export default function Section({
+  title,
+  subtitle,
+  className,
+  children,
+  headerRight,
+}: SectionProps) {
   return (
-    <section className={clsx('mb-6', className)}>
+    <section className={clsx("", className)}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">{title}</h2>
-          {subtitle && <p className="text-sm text-slate-500 dark:text-slate-300">{subtitle}</p>}
+          <h2 className="text-xl font-semibold text-gray-500  leading-tight">
+            {title}
+          </h2>
+          {subtitle && <p className="text-sm text-gray-500 ">{subtitle}</p>}
         </div>
         {headerRight && <div>{headerRight}</div>}
       </div>

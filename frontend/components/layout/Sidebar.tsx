@@ -1,77 +1,85 @@
 "use client";
-
 import React from "react";
 
 type SidebarItem = {
-    key: string;
-    label: string;
-    icon: React.ElementType;
+  key: string;
+  label: string;
+  icon: React.ElementType | any;
 };
 
 type SidebarProps = {
-    title?: string;
-    subtitle?: string;
-    items?: SidebarItem[];
-    activeKey?: string;
-    open?: boolean;
-    onClose?: () => void;
-    onSelect?: (key: string) => void;
+  title?: string;
+  subtitle?: string;
+  items?: SidebarItem[];
+  activeKey?: string;
+  open?: boolean;
+  onClose?: () => void;
+  onSelect?: (key: string) => void;
 };
 
 export default function Sidebar({
-    title = "Menu",
-    subtitle = "Welcome",
-    items = [],
-    activeKey = "",
-    open = true,
-    onClose = () => {},
-    onSelect = () => {},
+  title = "SmartContact",
+  subtitle = "Workspace",
+  items = [],
+  activeKey = "",
+  open = true,
+  onClose = () => {},
+  onSelect = () => {},
 }: SidebarProps) {
-    return (
-        <>
-            {open && (
-                <button
-                    type="button"
-                    aria-label="Close sidebar"
-                    className="fixed inset-0 z-40 bg-slate-950/55 xl:hidden"
-                    onClick={onClose}
-                />
-            )}
-            <aside className="w-full h-full bg-[var(--card)] flex flex-col py-6">
-                <div className="px-6 mb-2">
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">S</span>
-                        </div>
-                        <h2 className="text-xl font-semibold text-[var(--text)]">{title}</h2>
-                    </div>
-                    <p className="text-xs font-normal text-slate-500 dark:text-slate-400 uppercase tracking-wider">{subtitle}</p>
-                </div>
-                
-                <div className="flex flex-col gap-2 p-4">
-                    {items.map((item) => {
-                        const isActive = activeKey === item.key;
-                        const Icon = item.icon;
-                        return (
-                            <div
-                                key={item.key}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
-                                    isActive 
-                                      ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-medium" 
-                                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                  }`}
-                                onClick={() => {
-                                    onSelect(item.key);
-                                    onClose();
-                                }}
-                            >
-                                <Icon size={18} />
-                                <span>{item.label}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </aside>
-        </>
-    );
+  return (
+    <aside className="w-64 h-full bg-gradient-to-b from-purple-500 to-blue-500 text-white p-5 rounded-2xl flex flex-col justify-between shrink-0 shadow-[0_0_15px_#3b82f6] transition-all duration-300">
+      <div>
+        <div className="flex items-center gap-3  px-2">
+          <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30">
+            <span className="text-white font-bold text-xl">S</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold tracking-wide">{title}</h2>
+            <p className="text-xs text-indigo-200 uppercase tracking-widest">
+              {subtitle}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {items.map((item) => {
+            const isActive = activeKey === item.key;
+            const Icon = item.icon;
+
+            return (
+              <div
+                key={item.key}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 ${
+                  isActive
+                    ? "bg-white text-purple-600 shadow-lg"
+                    : "hover:bg-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-indigo-50"
+                }`}
+                onClick={() => {
+                  onSelect(item.key);
+                  onClose();
+                }}
+              >
+                {typeof Icon === "string" ? (
+                  <i className={Icon} />
+                ) : (
+                  <Icon size={20} />
+                )}
+                <span className="font-medium">{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="">
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-indigo-50"
+          onClick={() => onSelect("logout")}
+        >
+          <i className="fas fa-sign-out-alt" />
+          <span className="font-medium">Logout</span>
+        </div>
+      </div>
+    </aside>
+  );
 }

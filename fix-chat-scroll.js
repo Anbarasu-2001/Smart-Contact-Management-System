@@ -1,0 +1,1 @@
+const fs = require('fs'); let txt = fs.readFileSync('frontend/components/pages/Home.tsx', 'utf8'); txt = txt.replace('ref={chatScrollRef}', 'className=\'flex flex-col gap-4\' ref={chatScrollRef}'); fs.writeFileSync('frontend/components/pages/Home.tsx', txt); 

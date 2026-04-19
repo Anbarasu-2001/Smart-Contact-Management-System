@@ -12,6 +12,10 @@ const ShareLinkSchema = new mongoose.Schema({
         ref: 'Contact',
         required: true
     },
+    contactName: {
+        type: String,
+        default: 'Unknown Contact'
+    },
     receiverId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

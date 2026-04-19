@@ -7,12 +7,13 @@ import axios from "axios";
 import { HeroUIProvider } from "@heroui/system";
 
 // Set global axios defaults immediately
-if (typeof window !== 'undefined') {
-  axios.defaults.baseURL = '/api';
+if (typeof window !== "undefined") {
+  axios.defaults.baseURL = "/api";
 }
 
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+
 import { AuthStateProvider } from "../context/auth/AuthContext";
 import { ContactStateProvider } from "../context/contact/ContactContext";
 import { AlertStateProvider } from "../context/alert/AlertContext";
@@ -36,11 +37,17 @@ export function Providers({ children, themeProps }: ProvidersProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider {...themeProps}>
+      <NextThemesProvider
+        defaultTheme="light"
+        forcedTheme="light"
+        {...themeProps}
+      >
         <AuthStateProvider>
           <ContactStateProvider>
             <AlertStateProvider>
-              <GlobalSocketListener />
+              <React.Suspense fallback={null}>
+                <GlobalSocketListener />
+              </React.Suspense>
               {children}
             </AlertStateProvider>
           </ContactStateProvider>

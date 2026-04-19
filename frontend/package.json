@@ -71,6 +71,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.0.5",
     "@next/eslint-plugin-next": "^15.1.0",
     "@react-types/shared": "3.32.1",
     "@tailwindcss/postcss": "^4.2.2",

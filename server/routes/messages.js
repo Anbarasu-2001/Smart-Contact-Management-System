@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const Message = require('../models/Message');
 const Contact = require('../models/Contact');
 const User = require('../models/User');
+const Interaction = require('../models/Interaction');
 
 const getPairRoom = (a, b) => `chat:${[String(a), String(b)].sort().join('_')}`;
 
@@ -111,11 +112,12 @@ router.get('/:userId', auth, async (req, res) => {
     }
 });
 
+// Accepts text, file, image, video, audio messages
 router.post('/', auth, async (req, res) => {
-    const { senderId, receiverId, text } = req.body;
+    const { senderId, receiverId, text, messageType, fileUrl, fileName, fileSize, imageUrl, videoUrl, audioUrl, thumbnailUrl } = req.body;
 
-    if (!senderId || !receiverId || !text) {
-        return res.status(400).json({ msg: 'senderId, receiverId, and text are required' });
+    if (!senderId || !receiverId || (!text && !fileUrl && !imageUrl && !videoUrl && !audioUrl)) {
+        return res.status(400).json({ msg: 'senderId, receiverId, and content are required' });
     }
 
     try {
@@ -123,10 +125,55 @@ router.post('/', auth, async (req, res) => {
             senderId,
             receiverId,
             text,
-            ownerId: req.user.id, // Keeping ownerId in case Mongoose schema requires it
+            messageType: messageType || 'text',
+            fileUrl,
+            fileName,
+            fileSize,
+            imageUrl,
+            videoUrl,
+            audioUrl,
+            thumbnailUrl,
+            ownerId: req.user.id,
         });
 
         await message.save();
+
+        // Log interaction for dashboard
+        try {
+            const normalizedType = String(message.senderId || "") === req.user.id 
+                ? 'message_sent' 
+                : 'message_received';
+            
+            // Interaction logging expects 'contactId'
+            // We'll use receiverId as contactId if we are the sender
+            const targetId = String(message.senderId || "") === req.user.id 
+                ? message.receiverId 
+                : message.senderId;
+
+            const newInteraction = new Interaction({
+                userId: req.user.id,
+                contactId: targetId,
+                type: normalizedType,
+                timestamp: new Date(),
+                metadata: { messageId: message._id }
+            });
+            await newInteraction.save();
+
+            // Update contact relationship score if exists
+            const contact = await Contact.findOne({ 
+                userId: req.user.id, 
+                $or: [{ _id: targetId }, { userId: targetId }, { linkedUserId: targetId }]
+            });
+
+            if (contact) {
+                contact.relationshipScore += 2; // +2 for messages
+                contact.lastInteractionDate = new Date();
+                await contact.save();
+            }
+        } catch (intErr) {
+            console.error('Non-critical interaction log failure:', intErr.message);
+        }
+
         res.status(201).json(message);
     } catch (err) {
         console.error('Error saving message:', err.message);

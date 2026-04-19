@@ -1,372 +1,403 @@
-'use client';
+"use client";
 
-import React, { useReducer, createContext, ReactNode } from 'react';
-import api from '../../utils/api';
+import React, { useReducer, createContext, ReactNode } from "react";
+
+import api from "../../utils/api";
 import {
-    GET_CONTACTS,
-    ADD_CONTACT,
-    DELETE_CONTACT,
-    SET_CURRENT,
-    CLEAR_CURRENT,
-    UPDATE_CONTACT,
-    FILTER_CONTACTS,
-    CLEAR_FILTER,
-    CONTACT_ERROR,
-    GET_DASHBOARD_STATS,
-    DASHBOARD_ERROR,
-} from '../types';
+  GET_CONTACTS,
+  ADD_CONTACT,
+  DELETE_CONTACT,
+  SET_CURRENT,
+  CLEAR_CURRENT,
+  UPDATE_CONTACT,
+  FILTER_CONTACTS,
+  CLEAR_FILTER,
+  CONTACT_ERROR,
+  GET_DASHBOARD_STATS,
+  DASHBOARD_ERROR,
+} from "../types";
 
 // Types
 export interface Contact {
-    _id?: string;
-    name: string;
-    email?: string;
-    phone: string;
-    relationship?: 'Friend' | 'Family' | 'Work';
-    relationshipType?: 'friend' | 'family' | 'work' | 'colleague' | 'client' | 'other';
-    meetContext?: 'school' | 'college' | 'work' | 'event' | 'other';
-    priorityLevel?: 'high' | 'medium' | 'low';
-    notes?: string;
-    type?: 'personal' | 'professional';
-    linkedUserId?: string | null;
-    user?: string;
-    userId?: string | null;
-    ownerId?: string;
-    date?: string;
+  _id?: string;
+  name: string;
+  email?: string;
+  phone: string;
+  relationship?: "Friend" | "Family" | "Work";
+  relationshipType?:
+    | "friend"
+    | "family"
+    | "work"
+    | "colleague"
+    | "client"
+    | "other";
+  meetContext?: "school" | "college" | "work" | "event" | "other";
+  priorityLevel?: "high" | "medium" | "low";
+  notes?: string;
+  type?: "personal" | "professional";
+  linkedUserId?: string | null;
+  user?: string;
+  userId?: string | null;
+  ownerId?: string;
+  date?: string;
 }
 
 export interface DashboardStats {
-    totalContacts: number;
-    totalFavorites?: number; // Adjust based on actual API response
-    // Add other stats fields
+  totalContacts: number;
+  totalFavorites?: number; // Adjust based on actual API response
+  // Add other stats fields
 }
 
 interface ContactState {
-    contacts: Contact[];
-    current: Contact | null;
-    filtered: Contact[] | null;
-    error: string | null;
-    dashboardStats: DashboardStats | null;
-    loading: boolean;
+  contacts: Contact[];
+  current: Contact | null;
+  filtered: Contact[] | null;
+  error: string | null;
+  dashboardStats: DashboardStats | null;
+  loading: boolean;
 }
 
 type ContactAction =
-    | { type: typeof GET_CONTACTS; payload: Contact[] }
-    | { type: typeof ADD_CONTACT; payload: Contact }
-    | { type: typeof DELETE_CONTACT; payload: string }
-    | { type: typeof SET_CURRENT; payload: Contact }
-    | { type: typeof CLEAR_CURRENT }
-    | { type: typeof UPDATE_CONTACT; payload: Contact }
-    | { type: typeof FILTER_CONTACTS; payload: string }
-    | { type: typeof CLEAR_FILTER }
-    | { type: typeof CONTACT_ERROR; payload: string }
-    | { type: typeof GET_DASHBOARD_STATS; payload: DashboardStats }
-    | { type: typeof DASHBOARD_ERROR; payload: string };
+  | { type: typeof GET_CONTACTS; payload: Contact[] }
+  | { type: typeof ADD_CONTACT; payload: Contact }
+  | { type: typeof DELETE_CONTACT; payload: string }
+  | { type: typeof SET_CURRENT; payload: Contact }
+  | { type: typeof CLEAR_CURRENT }
+  | { type: typeof UPDATE_CONTACT; payload: Contact }
+  | { type: typeof FILTER_CONTACTS; payload: string }
+  | { type: typeof CLEAR_FILTER }
+  | { type: typeof CONTACT_ERROR; payload: string }
+  | { type: typeof GET_DASHBOARD_STATS; payload: DashboardStats }
+  | { type: typeof DASHBOARD_ERROR; payload: string };
 
 interface ContactContextType extends ContactState {
-    getContacts: () => Promise<void>;
-    addContact: (contact: Contact) => Promise<Contact | null>;
-    deleteContact: (id: string) => Promise<boolean>;
-    setCurrent: (contact: Contact) => void;
-    clearCurrent: () => void;
-    updateContact: (contact: Contact) => Promise<Contact | null>;
-    filterContacts: (text: string) => void;
-    clearFilter: () => void;
-    getDashboardStats: () => Promise<void>;
-    generateShareLink: (contactId: string, expiryInMinutes: number) => Promise<any>;
+  getContacts: () => Promise<void>;
+  addContact: (contact: Contact) => Promise<Contact | null>;
+  deleteContact: (id: string) => Promise<boolean>;
+  setCurrent: (contact: Contact) => void;
+  clearCurrent: () => void;
+  updateContact: (contact: Contact) => Promise<Contact | null>;
+  filterContacts: (text: string) => void;
+  clearFilter: () => void;
+  getDashboardStats: () => Promise<void>;
+  generateShareLink: (
+    contactId: string,
+    expiryInMinutes: number,
+  ) => Promise<any>;
 }
 
 const ContactContext = createContext<ContactContextType | undefined>(undefined);
 
 const sortContactsByName = (contacts: Contact[] = []) => {
-    return [...contacts].sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
+  return [...contacts].sort((a, b) =>
+    String(a?.name ?? "").localeCompare(String(b?.name ?? "")),
+  );
 };
 
 const getErrorMessage = (err: any) => {
-    if (err?.response?.status === 401) {
-        return '401 Unauthorized - please login again';
-    }
+  if (err?.response?.status === 401) {
+    return "401 Unauthorized - please login again";
+  }
 
-    if (!err.response || !err.response.data) {
-        return 'Server Error';
-    }
+  if (!err.response || !err.response.data) {
+    return "Server Error";
+  }
 
-    if (err.response.data.msg) {
-        return err.response.data.msg;
-    }
+  if (err.response.data.msg) {
+    return err.response.data.msg;
+  }
 
-    if (
-        Array.isArray(err.response.data.errors) &&
-        err.response.data.errors.length > 0
-    ) {
-        return err.response.data.errors[0].msg;
-    }
+  if (
+    Array.isArray(err.response.data.errors) &&
+    err.response.data.errors.length > 0
+  ) {
+    return err.response.data.errors[0].msg;
+  }
 
-    return 'Request failed';
+  return "Request failed";
 };
 
-const contactReducer = (state: ContactState, action: ContactAction): ContactState => {
-    switch (action.type) {
-        case GET_CONTACTS:
-            return {
-                ...state,
-                contacts: sortContactsByName(Array.isArray(action.payload) ? action.payload : []),
-                filtered: null,
-                loading: false,
-            };
-        case ADD_CONTACT:
-            return {
-                ...state,
-                contacts: sortContactsByName([action.payload, ...state.contacts]),
-                filtered: null,
-                loading: false,
-            };
-        case UPDATE_CONTACT:
-            return {
-                ...state,
-                contacts: sortContactsByName(state.contacts.map((contact) =>
-                    contact._id === action.payload._id ? action.payload : contact
-                )),
-                filtered: null,
-                loading: false,
-            };
-        case DELETE_CONTACT:
-            return {
-                ...state,
-                contacts: state.contacts.filter(
-                    (contact) => contact._id !== action.payload
-                ),
-                filtered: null,
-                loading: false,
-            };
-        case SET_CURRENT:
-            return {
-                ...state,
-                current: action.payload,
-            };
-        case CLEAR_CURRENT:
-            return {
-                ...state,
-                current: null,
-            };
-        case FILTER_CONTACTS:
-            return {
-                ...state,
-                filtered: state.contacts.filter((contact) => {
-                    const regex = new RegExp(`${action.payload}`, 'gi');
-                    const name = String(contact.name ?? '');
-                    const phone = String(contact.phone ?? '');
-                    const email = String(contact.email ?? '');
-                    return (
-                        name.match(regex)
-                        || phone.match(regex)
-                        || email.match(regex)
-                    );
-                }),
-            };
-        case CLEAR_FILTER:
-            return {
-                ...state,
-                filtered: null,
-            };
-        case CONTACT_ERROR:
-        case DASHBOARD_ERROR:
-            return {
-                ...state,
-                error: action.payload,
-                loading: false,
-            };
-        case GET_DASHBOARD_STATS:
-            return {
-                ...state,
-                dashboardStats: action.payload,
-                loading: false,
-            };
-        default:
-            return state;
-    }
+const contactReducer = (
+  state: ContactState,
+  action: ContactAction,
+): ContactState => {
+  switch (action.type) {
+    case GET_CONTACTS:
+      return {
+        ...state,
+        contacts: sortContactsByName(
+          Array.isArray(action.payload) ? action.payload : [],
+        ),
+        filtered: null,
+        loading: false,
+      };
+    case ADD_CONTACT:
+      return {
+        ...state,
+        contacts: sortContactsByName([action.payload, ...state.contacts]),
+        filtered: null,
+        loading: false,
+      };
+    case UPDATE_CONTACT:
+      return {
+        ...state,
+        contacts: sortContactsByName(
+          state.contacts.map((contact) =>
+            contact._id === action.payload._id ? action.payload : contact,
+          ),
+        ),
+        filtered: null,
+        loading: false,
+      };
+    case DELETE_CONTACT:
+      return {
+        ...state,
+        contacts: state.contacts.filter(
+          (contact) => contact._id !== action.payload,
+        ),
+        filtered: null,
+        loading: false,
+      };
+    case SET_CURRENT:
+      return {
+        ...state,
+        current: action.payload,
+      };
+    case CLEAR_CURRENT:
+      return {
+        ...state,
+        current: null,
+      };
+    case FILTER_CONTACTS:
+      return {
+        ...state,
+        filtered: state.contacts.filter((contact) => {
+          const regex = new RegExp(`${action.payload}`, "gi");
+          const name = String(contact.name ?? "");
+          const phone = String(contact.phone ?? "");
+          const email = String(contact.email ?? "");
+
+          return name.match(regex) || phone.match(regex) || email.match(regex);
+        }),
+      };
+    case CLEAR_FILTER:
+      return {
+        ...state,
+        filtered: null,
+      };
+    case CONTACT_ERROR:
+    case DASHBOARD_ERROR:
+      return {
+        ...state,
+        error: action.payload,
+        loading: false,
+      };
+    case GET_DASHBOARD_STATS:
+      return {
+        ...state,
+        dashboardStats: action.payload,
+        loading: false,
+      };
+    default:
+      return state;
+  }
 };
 
 interface ContactStateProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 const ContactStateProvider = (props: ContactStateProps) => {
-    const initialState: ContactState = {
-        contacts: [],
-        current: null,
-        filtered: null,
-        error: null,
-        dashboardStats: null,
-        loading: true,
-    };
+  const initialState: ContactState = {
+    contacts: [],
+    current: null,
+    filtered: null,
+    error: null,
+    dashboardStats: null,
+    loading: true,
+  };
 
-    const [state, dispatch] = useReducer(contactReducer, initialState);
+  const [state, dispatch] = useReducer(contactReducer, initialState);
 
-    // Get Contacts
-    const getContacts = async () => {
-        try {
-            const res = await api.get('/contacts');
-            dispatch({
-                type: GET_CONTACTS,
-                payload: Array.isArray(res.data) ? res.data : [],
-            });
-        } catch (err: any) {
-            console.error('getContacts error:', err.message);
-            dispatch({
-                type: CONTACT_ERROR,
-                payload: getErrorMessage(err),
-            });
-        }
-    };
- 
-    // Add Contact
-    const addContact = async (contact: Contact) => {
-        try {
-            const res = await api.post('/contacts', contact);
-            // Backend now returns { contact, warning }
-            const contactData = res.data.contact || res.data;
-            dispatch({
-                type: ADD_CONTACT,
-                payload: contactData,
-            });
- 
-            // Keep UI fast by inserting immediately, then sync canonical list from DB.
-            void getContacts();
- 
-            // If there's a warning about similar contacts, show it
-            if (res.data.warning) {
-                dispatch({
-                    type: CONTACT_ERROR,
-                    payload: res.data.warning,
-                });
-            }
-            return contactData;
-        } catch (err) {
-            dispatch({
-                type: CONTACT_ERROR,
-                payload: getErrorMessage(err),
-            });
-            return null;
-        }
-    };
- 
-    // Delete Contact
-    const deleteContact = async (id: string) => {
-        try {
-            await api.delete(`/contacts/${id}`);
-            dispatch({
-                type: DELETE_CONTACT,
-                payload: id,
-            });
-            return true;
-        } catch (err: any) {
-            console.error('deleteContact error:', err.message);
-            dispatch({
-                type: CONTACT_ERROR,
-                payload: getErrorMessage(err),
-            });
-            return false;
-        }
-    };
- 
-    // Update Contact
-    const updateContact = async (contact: Contact) => {
-        // Ensure id is present for update
-        if (!contact._id) return null;
- 
-        try {
-            const res = await api.put(`/contacts/${contact._id}`, contact);
-            dispatch({
-                type: UPDATE_CONTACT,
-                payload: res.data,
-            });
-            return res.data;
-        } catch (err: any) {
-            console.error('updateContact error:', err.message);
-            dispatch({
-                type: CONTACT_ERROR,
-                payload: getErrorMessage(err),
-            });
-            return null;
-        }
-    };
- 
-    // Set Current Contact
-    const setCurrent = (contact: Contact) => {
-        dispatch({ type: SET_CURRENT, payload: contact });
-    };
- 
-    // Clear Current Contact
-    const clearCurrent = () => {
-        dispatch({ type: CLEAR_CURRENT });
-    };
- 
-    // Filter Contacts
-    const filterContacts = (text: string) => {
-        dispatch({ type: FILTER_CONTACTS, payload: text });
-    };
- 
-    // Clear Filter
-    const clearFilter = () => {
-        dispatch({ type: CLEAR_FILTER });
-    };
- 
-    // Get Dashboard Stats
-    const getDashboardStats = async () => {
-        try {
-            const res = await api.get('/dashboard');
-            dispatch({
-                type: GET_DASHBOARD_STATS,
-                payload: res.data,
-            });
-        } catch (err: any) {
-            console.error('getDashboardStats error:', err.message);
-            dispatch({
-                type: DASHBOARD_ERROR,
-                payload: getErrorMessage(err),
-            });
-        }
-    };
- 
-    // Generate Share Link
-    const generateShareLink = React.useCallback(async (contactId: string, expiryInMinutes: number) => {
-        try {
-            const res = await api.post(
-                '/share/create',
-                { contactId, expiresInMinutes: expiryInMinutes }
-            );
-            return res.data;
-        } catch (err) {
-            console.error(err);
-            return null;
-        }
-    }, []);
+  // Get Contacts
+  const getContacts = async () => {
+    try {
+      const res = await api.get("/contacts");
 
-    return (
-        <ContactContext.Provider
-            value={{
-                contacts: state.contacts,
-                current: state.current,
-                filtered: state.filtered,
-                error: state.error,
-                dashboardStats: state.dashboardStats,
-                loading: state.loading,
-                getContacts,
-                addContact,
-                deleteContact,
-                setCurrent,
-                clearCurrent,
-                updateContact,
-                filterContacts,
-                clearFilter,
-                getDashboardStats,
-                generateShareLink,
-            }}
-        >
-            {props.children}
-        </ContactContext.Provider>
-    );
+      dispatch({
+        type: GET_CONTACTS,
+        payload: Array.isArray(res.data) ? res.data : [],
+      });
+    } catch (err: any) {
+      console.error("getContacts error:", err.message);
+      dispatch({
+        type: CONTACT_ERROR,
+        payload: getErrorMessage(err),
+      });
+    }
+  };
+
+  // Add Contact
+  const addContact = async (contact: Contact) => {
+    try {
+      const res = await api.post("/contacts", contact);
+      // Backend now returns { contact, warning }
+      const contactData = res.data.contact || res.data;
+
+      dispatch({
+        type: ADD_CONTACT,
+        payload: contactData,
+      });
+
+      // Keep UI fast by inserting immediately, then sync canonical list from DB.
+      void getContacts();
+
+      // If there's a warning about similar contacts, show it
+      if (res.data.warning) {
+        dispatch({
+          type: CONTACT_ERROR,
+          payload: res.data.warning,
+        });
+      }
+
+      return contactData;
+    } catch (err) {
+      dispatch({
+        type: CONTACT_ERROR,
+        payload: getErrorMessage(err),
+      });
+
+      return null;
+    }
+  };
+
+  // Delete Contact
+  const deleteContact = async (id: string) => {
+    try {
+      await api.delete(`/contacts/${id}`);
+      dispatch({
+        type: DELETE_CONTACT,
+        payload: id,
+      });
+
+      return true;
+    } catch (err: any) {
+      console.error("deleteContact error:", err.message);
+      dispatch({
+        type: CONTACT_ERROR,
+        payload: getErrorMessage(err),
+      });
+
+      return false;
+    }
+  };
+
+  // Update Contact
+  const updateContact = async (contact: Contact) => {
+    // Ensure id is present for update
+    if (!contact._id) return null;
+
+    try {
+      const res = await api.put(`/contacts/${contact._id}`, contact);
+
+      dispatch({
+        type: UPDATE_CONTACT,
+        payload: res.data,
+      });
+
+      return res.data;
+    } catch (err: any) {
+      console.error("updateContact error:", err.message);
+      dispatch({
+        type: CONTACT_ERROR,
+        payload: getErrorMessage(err),
+      });
+
+      return null;
+    }
+  };
+
+  // Set Current Contact
+  const setCurrent = (contact: Contact) => {
+    dispatch({ type: SET_CURRENT, payload: contact });
+  };
+
+  // Clear Current Contact
+  const clearCurrent = () => {
+    dispatch({ type: CLEAR_CURRENT });
+  };
+
+  // Filter Contacts
+  const filterContacts = (text: string) => {
+    dispatch({ type: FILTER_CONTACTS, payload: text });
+  };
+
+  // Clear Filter
+  const clearFilter = () => {
+    dispatch({ type: CLEAR_FILTER });
+  };
+
+  // Get Dashboard Stats
+  const getDashboardStats = async () => {
+    try {
+      const res = await api.get("/dashboard");
+
+      dispatch({
+        type: GET_DASHBOARD_STATS,
+        payload: res.data,
+      });
+    } catch (err: any) {
+      console.error("getDashboardStats error:", err.message);
+      dispatch({
+        type: DASHBOARD_ERROR,
+        payload: getErrorMessage(err),
+      });
+    }
+  };
+
+  // Generate Share Link
+  const generateShareLink = React.useCallback(
+    async (contactId: string, expiryInMinutes: number) => {
+      try {
+        const res = await api.post("/share/create", {
+          contactId,
+          expiresInMinutes: expiryInMinutes,
+        });
+
+        return res.data;
+      } catch (err) {
+        console.error(err);
+
+        return null;
+      }
+    },
+    [],
+  );
+
+  return (
+    <ContactContext.Provider
+      value={{
+        contacts: state.contacts,
+        current: state.current,
+        filtered: state.filtered,
+        error: state.error,
+        dashboardStats: state.dashboardStats,
+        loading: state.loading,
+        getContacts,
+        addContact,
+        deleteContact,
+        setCurrent,
+        clearCurrent,
+        updateContact,
+        filterContacts,
+        clearFilter,
+        getDashboardStats,
+        generateShareLink,
+      }}
+    >
+      {props.children}
+    </ContactContext.Provider>
+  );
 };
 
 export { ContactContext, ContactStateProvider };

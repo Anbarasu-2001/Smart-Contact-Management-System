@@ -37,14 +37,44 @@ const MessageSchema = new mongoose.Schema({
     },
     messageType: {
         type: String,
-        enum: ['text', 'contact_share'],
+        enum: ['text', 'contact_share', 'image', 'video', 'audio', 'file', 'call'],
         default: 'text',
     },
     text: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
         maxlength: 2000,
+    },
+
+    // File/message type fields
+    fileUrl: {
+        type: String,
+        default: null,
+    },
+    fileName: {
+        type: String,
+        default: null,
+    },
+    fileSize: {
+        type: Number,
+        default: null,
+    },
+    imageUrl: {
+        type: String,
+        default: null,
+    },
+    videoUrl: {
+        type: String,
+        default: null,
+    },
+    audioUrl: {
+        type: String,
+        default: null,
+    },
+    thumbnailUrl: {
+        type: String,
+        default: null,
     },
     sharedContactId: {
         type: mongoose.Schema.Types.ObjectId,

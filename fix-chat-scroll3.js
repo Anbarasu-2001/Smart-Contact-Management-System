@@ -1,0 +1,1 @@
+const fs = require('fs'); let txt = fs.readFileSync('frontend/components/pages/Home.tsx', 'utf8'); txt = txt.replace(/ className=\'flex flex-col gap-4\'/g, ''); txt = txt.replace('mb-4\" ", " mb-4 flex flex-col "gap-4\'); fs.writeFileSync('frontend/components/pages/Home.tsx', txt); 

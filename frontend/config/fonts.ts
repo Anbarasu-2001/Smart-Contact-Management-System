@@ -1,4 +1,7 @@
-import { Poppins as FontSans, JetBrains_Mono as FontMono } from "next/font/google";
+import {
+  Poppins as FontSans,
+  JetBrains_Mono as FontMono,
+} from "next/font/google";
 
 export const fontSans = FontSans({
   weight: ["400", "500", "600", "700"],

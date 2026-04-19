@@ -91,15 +91,6 @@ router.post('/', auth, async (req, res) => {
     try {
         const contact = await Contact.findById(contactId);
 
-        if (!contact) {
-            return res.status(404).json({ msg: 'Contact not found' });
-        }
-
-        // Verify user owns contact
-        if (contact.userId.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'Not authorized' });
-        }
-
         const newInteraction = new Interaction({
             userId: req.user.id,
             contactId,
@@ -112,24 +103,23 @@ router.post('/', auth, async (req, res) => {
 
         const interaction = await newInteraction.save();
 
-        // Update Relationship Score
-        let scoreIncrement = 0;
-        if (interaction.type === 'meeting') scoreIncrement = 10;
-        else if (interaction.type.startsWith('call_')) scoreIncrement = 5;
-        else if (interaction.type.startsWith('message_')) scoreIncrement = 2;
-        else if (interaction.type === 'follow_up') scoreIncrement = 3;
+        // If a formal contact exists, update relationship score and last interaction date
+        if (contact && String(contact.ownerId || "") === req.user.id) {
+            let scoreIncrement = 0;
+            if (interaction.type === 'meeting') scoreIncrement = 10;
+            else if (interaction.type.startsWith('call_')) scoreIncrement = 5;
+            else if (interaction.type.startsWith('message_')) scoreIncrement = 2;
+            else if (interaction.type === 'follow_up') scoreIncrement = 3;
 
-        contact.relationshipScore += scoreIncrement;
+            contact.relationshipScore += scoreIncrement;
+            contact.lastInteractionDate = interaction.timestamp || new Date();
 
-        // Update last interaction date
-        contact.lastInteractionDate = interaction.timestamp || new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            contact.isActive = contact.lastInteractionDate > thirtyDaysAgo;
 
-        // Update isActive status (active if interaction within last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        contact.isActive = contact.lastInteractionDate > thirtyDaysAgo;
-
-        await contact.save();
+            await contact.save();
+        }
 
         res.json(interaction);
     } catch (err) {
@@ -146,7 +136,7 @@ router.get('/:contactId', auth, async (req, res) => {
         const contact = await Contact.findById(req.params.contactId);
 
         if (!contact) return res.status(404).json({ msg: 'Contact not found' });
-        if (contact.userId.toString() !== req.user.id) {
+        if (String(contact.ownerId || "") !== req.user.id) {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 

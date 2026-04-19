@@ -1,9 +1,10 @@
 "use client";
 
 import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "../../context/auth/AuthContext";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Search, LogOut } from "lucide-react";
+
+import { AuthContext } from "../../context/auth/AuthContext";
 
 export const Navbar = () => {
   const authContext = useContext(AuthContext);
@@ -22,20 +23,24 @@ export const Navbar = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
-          type="text"
+          className="border border-[var(--border)] rounded-2xl px-3 py-1.5 pl-9 w-64 text-sm bg-transparent text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition transition-all duration-300"
           placeholder="Search..."
-          className="border border-[var(--border)] rounded-lg px-3 py-1.5 pl-9 w-64 text-sm bg-transparent text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition"
+          type="text"
         />
       </div>
 
       <div className="flex items-center gap-4">
         <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 text-gray-500 dark:text-gray-400"
           aria-label="Toggle Theme"
+          className="p-2 rounded-full hover:  transition-all duration-200 hover:scale-[1.02] text-gray-500 "
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
           {mounted ? (
-            theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />
+            theme === "dark" ? (
+              <Sun size={18} />
+            ) : (
+              <Moon size={18} />
+            )
           ) : (
             <div className="w-[18px] h-[18px]" />
           )}
@@ -46,9 +51,9 @@ export const Navbar = () => {
         </div>
 
         <button
-          onClick={logout}
-          className="p-2 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:scale-105"
+          className="p-2 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:scale-[1.02]"
           title="Logout"
+          onClick={logout}
         >
           <LogOut size={18} />
         </button>
